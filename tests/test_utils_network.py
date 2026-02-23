@@ -60,17 +60,21 @@ class TestFetchDataFromUrl:
         # Given: a mock response with status 404
         mock_cls = _build_mocks(status=404)
 
-        with patch("vbot.utils.network.ClientSession", mock_cls):
+        with (
+            patch("vbot.utils.network.ClientSession", mock_cls),
+            pytest.raises(URLNotAvailableError, match="Could not fetch data"),
+        ):
             # When/Then: fetching raises URLNotAvailableError
-            with pytest.raises(URLNotAvailableError, match="Could not fetch data"):
-                await fetch_data_from_url("https://example.com/missing.png")
+            await fetch_data_from_url("https://example.com/missing.png")
 
     async def test_server_error_raises_url_not_available(self):
         """Verify server error status raises URLNotAvailableError."""
         # Given: a mock response with status 500
         mock_cls = _build_mocks(status=500)
 
-        with patch("vbot.utils.network.ClientSession", mock_cls):
+        with (
+            patch("vbot.utils.network.ClientSession", mock_cls),
+            pytest.raises(URLNotAvailableError),
+        ):
             # When/Then: fetching raises URLNotAvailableError
-            with pytest.raises(URLNotAvailableError):
-                await fetch_data_from_url("https://example.com/error")
+            await fetch_data_from_url("https://example.com/error")

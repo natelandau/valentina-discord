@@ -213,7 +213,7 @@ class TestDeleteCampaignChapterAsset:
         delete_svc = AsyncMock()
         call_count = 0
 
-        def chapters_factory(**_kwargs):
+        def chapters_factory(**_kwargs) -> AsyncMock:
             nonlocal call_count
             call_count += 1
             if call_count <= 1:

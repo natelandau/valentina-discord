@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 
 from vbot.config.base import Settings, string_to_list
 from vbot.constants import LogLevel
@@ -51,7 +52,7 @@ class TestSettingsFromEnvVars:
         s = Settings()
 
         # Then: required fields are populated
-        assert s.discord.token == "test-token-123"
+        assert s.discord.token == "test-token-123"  # noqa: S105
         assert s.api.base_url == "http://localhost:8000"
         assert s.api.api_key == "test-key"
         assert s.api.default_company_id == "company-001"
@@ -113,7 +114,7 @@ class TestSettingsFromEnvVars:
         monkeypatch.setenv("VALBOT_API__DEFAULT_COMPANY_ID", "c")
         monkeypatch.setenv("VALBOT_API__TIMEOUT", "30.0")
         monkeypatch.setenv("VALBOT_API__MAX_RETRIES", "10")
-        monkeypatch.setenv("VALBOT_DATABASE_PATH", "/tmp/test.db")
+        monkeypatch.setenv("VALBOT_DATABASE_PATH", "/tmp/test.db")  # noqa: S108
         monkeypatch.setenv("VALBOT_LOG_LEVEL", "DEBUG")
 
         # When: constructing Settings
@@ -122,7 +123,7 @@ class TestSettingsFromEnvVars:
         # Then: overridden values are used
         assert s.api.timeout == 30.0
         assert s.api.max_retries == 10
-        assert s.database_path == Path("/tmp/test.db")
+        assert s.database_path == Path("/tmp/test.db")  # noqa: S108
         assert s.log_level == LogLevel.DEBUG
 
     def test_missing_required_field_raises(self, monkeypatch):
@@ -136,6 +137,6 @@ class TestSettingsFromEnvVars:
         monkeypatch.delenv("VALBOT_API__API_KEY", raising=False)
         monkeypatch.delenv("VALBOT_API__DEFAULT_COMPANY_ID", raising=False)
 
-        # When/Then: constructing Settings raises
-        with pytest.raises(Exception):
+        # When/Then: constructing Settings raises ValidationError
+        with pytest.raises(ValidationError, match="Field required"):
             Settings()
