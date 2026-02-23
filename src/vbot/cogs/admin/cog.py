@@ -13,12 +13,11 @@ import inflect
 from discord.commands import Option
 from discord.ext import commands
 from loguru import logger
-from vclient import characters_service, users_service
-from vclient.models import DiscordProfile
+from vclient import characters_service
 
 from vbot.bot import Valentina, ValentinaContext
 from vbot.db.models import DBCampaign, DBCampaignBook, DBCharacter, DBUser
-from vbot.handlers import book_handler, campaign_handler, database_handler
+from vbot.handlers import book_handler, campaign_handler, database_handler, user_api_handler
 from vbot.lib import exceptions
 from vbot.lib.channel_mngr import ChannelManager
 from vbot.utils import assert_permissions, set_user_role, truncate_string
@@ -172,7 +171,7 @@ class AdminCog(commands.Cog):
             m = "No users found. Create one first."
             raise exceptions.UserNotLinkedError(m)
 
-        api_user = await users_service().get(user_id=api_user_id)
+        api_user = await user_api_handler.get_user(api_user_id)
 
         title = f"Link {ctx.author.name} (you) to {api_user.name}"
         description = f"This will allow {ctx.author.name} to administer this server via Valentina.\n\nAre you sure you want to link `{ctx.author.name}` to `{api_user.name}`?"
@@ -182,25 +181,12 @@ class AdminCog(commands.Cog):
         if not is_confirmed:
             return
 
-        await database_handler.update_or_create_user(
-            user=api_user,
+        await user_api_handler.update_user(
+            user_api_id=api_user_id,
             discord_user=ctx.author,
+            requesting_user_api_id=api_user_id,
         )
 
-        # Patch the user in the API
-        discord_profile = DiscordProfile(
-            id=str(ctx.author.id),
-            username=ctx.author.name,
-            global_name=ctx.author.global_name,
-            avatar_id=str(ctx.author.avatar.key) if ctx.author.avatar else None,
-            avatar_url=ctx.author.avatar.url if ctx.author.avatar else None,
-            discriminator=ctx.author.discriminator,
-        )
-        await users_service().update(
-            user_id=api_user_id, requesting_user_id=api_user_id, discord_profile=discord_profile
-        )
-
-        # Set the user role in Discord
         await set_user_role(
             bot=ctx.bot,
             guild=ctx.guild,
@@ -258,7 +244,7 @@ class AdminCog(commands.Cog):
             m = "No users found. Create one first."
             raise exceptions.UserNotLinkedError(m)
 
-        new_api_user = await users_service().get(user_id=api_user_id)
+        new_api_user = await user_api_handler.get_user(api_user_id)
         requesting_user_api_id = await ctx.get_api_user_id()
 
         title = f"Link {discord_user.name} user to {new_api_user.name}"
@@ -269,22 +255,10 @@ class AdminCog(commands.Cog):
         if not is_confirmed:
             return
 
-        await database_handler.update_or_create_user(
-            user=new_api_user,
+        await user_api_handler.update_user(
+            user_api_id=new_api_user.id,
             discord_user=discord_user,
-        )
-        discord_profile = DiscordProfile(
-            id=str(discord_user.id),
-            username=discord_user.name,
-            global_name=discord_user.global_name,
-            avatar_id=str(discord_user.avatar.key) if discord_user.avatar else None,
-            avatar_url=discord_user.avatar.url if discord_user.avatar else None,
-            discriminator=discord_user.discriminator,
-        )
-        await users_service().update(
-            user_id=new_api_user.id,
-            requesting_user_id=requesting_user_api_id,
-            discord_profile=discord_profile,
+            requesting_user_api_id=requesting_user_api_id,
         )
 
         await set_user_role(
@@ -396,25 +370,12 @@ class AdminCog(commands.Cog):
         name = re.sub(r"[^-_a-zA-Z0-9\s]", "", modal.name.strip()).title()
         email = modal.email.strip()
 
-        discord_profile = DiscordProfile(
-            id=str(discord_user.id),
-            username=discord_user.name,
-            global_name=discord_user.global_name,
-            avatar_id=str(discord_user.avatar.key) if discord_user.avatar else None,
-            avatar_url=discord_user.avatar.url if discord_user.avatar else None,
-            discriminator=discord_user.discriminator,
-        )
-        new_api_user = await users_service().create(
-            requesting_user_id=requesting_user_api_id,
+        await user_api_handler.create_user(
+            discord_user=discord_user,
+            requesting_user_api_id=requesting_user_api_id,
             name=name,
             email=email,
-            role=role,
-            discord_profile=discord_profile,
-        )
-
-        await database_handler.update_or_create_user(
-            user=new_api_user,
-            discord_user=discord_user,
+            role=cast("UserRole", role),
         )
 
         await set_user_role(
@@ -470,24 +431,12 @@ class AdminCog(commands.Cog):
             m = f"User {discord_user.name} not found in database. Please link this user to a Valentina user."
             raise exceptions.UserNotLinkedError(m)
 
-        # We update the discord profile anytime we update a user just to keep the data in sync.
-        discord_profile = DiscordProfile(
-            id=str(discord_user.id),
-            username=discord_user.name,
-            global_name=discord_user.global_name,
-            avatar_id=str(discord_user.avatar.key) if discord_user.avatar else None,
-            avatar_url=discord_user.avatar.url if discord_user.avatar else None,
-            discriminator=discord_user.discriminator,
+        await user_api_handler.update_user(
+            user_api_id=db_user.api_user_id,
+            discord_user=discord_user,
+            requesting_user_api_id=requesting_user_api_id,
+            role=cast("UserRole", role),
         )
-        await users_service().update(
-            user_id=db_user.api_user_id,
-            requesting_user_id=requesting_user_api_id,
-            discord_profile=discord_profile,
-            role=role,
-        )
-
-        db_user.role = role
-        await db_user.save()
 
         await set_user_role(
             bot=ctx.bot, guild=ctx.guild, member=discord_user, role=cast("UserRole", role)
