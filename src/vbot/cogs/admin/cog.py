@@ -13,11 +13,10 @@ import inflect
 from discord.commands import Option
 from discord.ext import commands
 from loguru import logger
-from vclient import characters_service
 
 from vbot.bot import Valentina, ValentinaContext
-from vbot.db.models import DBCampaign, DBCampaignBook, DBCharacter, DBUser
-from vbot.handlers import book_handler, campaign_handler, database_handler, user_api_handler
+from vbot.db.models import DBCampaign, DBUser
+from vbot.handlers import user_api_handler
 from vbot.lib import exceptions
 from vbot.lib.channel_mngr import ChannelManager
 from vbot.utils import assert_permissions, set_user_role, truncate_string
@@ -25,6 +24,7 @@ from vbot.views import UserModal, present_embed
 from vbot.workflows import confirm_action
 
 from . import autocomplete
+from .lib import resync_all_data
 
 if TYPE_CHECKING:
     from vclient.constants import UserRole
@@ -58,7 +58,7 @@ class AdminCog(commands.Cog):
     ### VALENTINA API MANAGEMENT #######################################################
     @valentina.command(name="resync", description="Resync all data from the Valentina API.")
     @commands.has_permissions(administrator=True)
-    async def resync_api_data(  # noqa: C901, PLR0912
+    async def resync_api_data(
         self,
         ctx: ValentinaContext,
         hidden: Annotated[
@@ -81,57 +81,10 @@ class AdminCog(commands.Cog):
             return
 
         api_user_id = await ctx.get_api_user_id()
-        all_api_campaigns = await campaign_handler.list_campaigns(user_api_id=api_user_id)
-        book_api_ids = []
-        character_api_ids = []
-        for campaign in all_api_campaigns:
-            await database_handler.update_or_create_campaign(campaign)
-            all_api_books = await book_handler.list_books(
-                user_api_id=api_user_id, campaign_api_id=campaign.id
-            )
-            for book in all_api_books:
-                await database_handler.update_or_create_book(book)
-            book_api_ids.extend([book.id for book in all_api_books])
-
-            player_characters = await characters_service(
-                user_id=api_user_id, campaign_id=campaign.id
-            ).list_all(character_type="PLAYER")
-            for character in player_characters:
-                await database_handler.update_or_create_character(character)
-            character_api_ids.extend([character.id for character in player_characters])
-
-            storyteller_characters = await characters_service(
-                user_id=api_user_id, campaign_id=campaign.id
-            ).list_all(character_type="STORYTELLER")
-            for character in storyteller_characters:
-                await database_handler.update_or_create_character(character)
-            character_api_ids.extend([character.id for character in storyteller_characters])
-
-        for db_campaign in await DBCampaign.all():
-            if db_campaign.api_id not in [c.id for c in all_api_campaigns]:
-                logger.info(
-                    f"Delete campaign {db_campaign.name} ({db_campaign.api_id}) from database."
-                )
-                await db_campaign.delete()
-
-        for db_book in await DBCampaignBook.all():
-            if db_book.api_id not in book_api_ids:
-                logger.info(f"Delete book {db_book.name} ({db_book.api_id}) from database.")
-                await db_book.delete()
-
-        for db_character in await DBCharacter.all():
-            if db_character.api_id not in character_api_ids:
-                logger.info(
-                    f"Delete character {db_character.name} ({db_character.api_id}) from database."
-                )
-                await db_character.delete()
-
-        channel_manager = ChannelManager(guild=ctx.guild)
-        for db_campaign in await DBCampaign.all():
-            await channel_manager.confirm_campaign_channels(db_campaign)
+        messages = await resync_all_data(user_api_id=api_user_id, guild=ctx.guild)
 
         confirmation_embed.description = "All data has been resynced from the Valentina API.\n"
-        confirmation_embed.description += "\n - ".join(channel_manager.messages)
+        confirmation_embed.description += "\n - ".join(messages)
         try:
             await msg.edit_original_response(embed=confirmation_embed, view=None)
         except discord.NotFound:
