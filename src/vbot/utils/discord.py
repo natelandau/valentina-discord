@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, assert_never
 import discord
 from loguru import logger
 from vclient import books_service, campaigns_service, characters_service
+from vclient.models import DiscordProfile
 
 from vbot.constants import CampaignChannelName, ChannelPermission
 from vbot.db.models import DBCampaign, DBCampaignBook, DBCharacter, DBUser
@@ -18,7 +19,12 @@ if TYPE_CHECKING:
 
     from vbot.bot import Valentina, ValentinaAutocompleteContext, ValentinaContext
 
-__all__ = ("assert_permissions", "fetch_channel_object", "set_channel_perms")
+__all__ = (
+    "assert_permissions",
+    "build_discord_profile",
+    "fetch_channel_object",
+    "set_channel_perms",
+)
 
 
 @dataclass(eq=True)
@@ -33,6 +39,25 @@ class ChannelObjects:
     def __bool__(self) -> bool:
         """Return True if any of the objects are present."""
         return any([self.campaign, self.book, self.character])
+
+
+def build_discord_profile(member: discord.Member | discord.User) -> DiscordProfile:
+    """Build a DiscordProfile DTO from a Discord member or user object.
+
+    Args:
+        member: The Discord member or user to extract profile data from.
+
+    Returns:
+        DiscordProfile: A populated DiscordProfile data transfer object.
+    """
+    return DiscordProfile(
+        id=str(member.id),
+        username=member.name,
+        global_name=member.global_name,
+        avatar_id=str(member.avatar.key) if member.avatar else None,
+        avatar_url=member.avatar.url if member.avatar else None,
+        discriminator=member.discriminator,
+    )
 
 
 async def assert_permissions(

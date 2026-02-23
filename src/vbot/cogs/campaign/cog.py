@@ -4,23 +4,21 @@ import contextlib
 from typing import Annotated
 
 import discord
-import inflect
 from discord.commands import Option
 from discord.ext import commands
 from vclient import chapters_service
 
 from vbot.bot import Valentina, ValentinaContext
 from vbot.cogs import autocompletion
+from vbot.cogs.campaign.lib import build_campaign_list_text
 from vbot.constants import EmbedColor
 from vbot.db.models import DBCampaign
-from vbot.handlers import book_handler, campaign_handler, character_handler
+from vbot.handlers import book_handler, campaign_handler
 from vbot.lib import exceptions
 from vbot.utils.discord import fetch_channel_object
 from vbot.utils.strings import truncate_string
 from vbot.views import CampaignModal, auto_paginate, present_embed
 from vbot.workflows import CampaignViewer, confirm_action
-
-p = inflect.engine()
 
 
 class CampaignCog(commands.Cog):
@@ -51,11 +49,12 @@ class CampaignCog(commands.Cog):
         ],
     ) -> None:
         """List all campaigns."""
-        api_user_id = await ctx.get_api_user_id()
+        text = await build_campaign_list_text(
+            user_api_id=await ctx.get_api_user_id(),
+            guild_name=ctx.guild.name,
+        )
 
-        campaigns = await campaign_handler.list_campaigns(user_api_id=api_user_id)
-
-        if len(campaigns) == 0:
+        if text is None:
             await present_embed(
                 ctx,
                 title="No campaigns",
@@ -64,30 +63,6 @@ class CampaignCog(commands.Cog):
                 ephemeral=hidden,
             )
             return
-
-        text = f"## {len(campaigns)} {p.plural_noun('campaign', len(campaigns))} on `{ctx.guild.name}`\n"
-        for c in sorted(campaigns, key=lambda x: x.name):
-            books = await book_handler.list_books(user_api_id=api_user_id, campaign_api_id=c.id)
-
-            characters = await character_handler.list_characters(
-                campaign_api_id=c.id, user_api_id=api_user_id, character_type="PLAYER"
-            )
-
-            text += f"### **{c.name}**\n"
-            text += f"{truncate_string(c.description, 150)}\n" if c.description else ""
-
-            if len(books) > 0:
-                text += f"**{len(books)} {p.plural_noun('book', len(books))}**\n"
-                for book in sorted(books, key=lambda x: x.number):
-                    text += f"- #{book.number}: {book.name}\n"
-                    chapters = await chapters_service(
-                        user_id=api_user_id, campaign_id=c.id, book_id=book.id
-                    ).list_all()
-                    for chapter in sorted(chapters, key=lambda x: x.number):
-                        text += f"  - Chapter {chapter.number}. {chapter.name}\n"
-            text += f"\n**{len(characters)} {p.plural_noun('character', len(characters))}**\n"
-            for character in sorted(characters, key=lambda x: x.name):
-                text += f"- {character.name}\n"
 
         await auto_paginate(
             ctx=ctx,

@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from vclient.models import (
     Campaign,
     CampaignBook,
+    CampaignChapter,
     CampaignExperience,
     Character,
     DiscordProfile,
@@ -116,3 +117,17 @@ def make_campaign_experience(**overrides) -> CampaignExperience:
     }
     defaults.update(overrides)
     return CampaignExperience(**defaults)
+
+
+def make_chapter(**overrides) -> CampaignChapter:
+    """Create a CampaignChapter instance with sensible defaults."""
+    defaults = {
+        "id": "chapter-001",
+        "date_created": datetime(2024, 1, 1, tzinfo=UTC),
+        "date_modified": datetime(2024, 1, 1, tzinfo=UTC),
+        "name": "Test Chapter",
+        "number": 1,
+        "book_id": "book-001",
+    }
+    defaults.update(overrides)
+    return CampaignChapter(**defaults)
