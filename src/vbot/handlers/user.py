@@ -6,10 +6,11 @@ from typing import TYPE_CHECKING
 
 from loguru import logger
 from vclient import users_service
-from vclient.models import DiscordProfile, UserCreate, UserUpdate
+from vclient.models import UserCreate, UserUpdate
 
 from vbot.db.models import DBUser
 from vbot.lib import exceptions
+from vbot.utils import build_discord_profile
 
 if TYPE_CHECKING:
     import discord
@@ -86,14 +87,7 @@ class UserAPIHandler:
         Returns:
             User: The created user.
         """
-        discord_profile = DiscordProfile(
-            id=str(discord_user.id),
-            username=discord_user.name,
-            global_name=discord_user.global_name or None,
-            avatar_id=str(discord_user.avatar.key) if discord_user.avatar else None,
-            avatar_url=discord_user.avatar.url if discord_user.avatar else None,
-            discriminator=discord_user.discriminator,
-        )
+        discord_profile = build_discord_profile(discord_user)
 
         user_dto = UserCreate(
             name=name,
@@ -132,14 +126,7 @@ class UserAPIHandler:
         Returns:
             User: The updated user.
         """
-        discord_profile = DiscordProfile(
-            id=str(discord_user.id),
-            username=discord_user.name,
-            global_name=discord_user.global_name or None,
-            avatar_id=str(discord_user.avatar.key) if discord_user.avatar else None,
-            avatar_url=discord_user.avatar.url if discord_user.avatar else None,
-            discriminator=discord_user.discriminator,
-        )
+        discord_profile = build_discord_profile(discord_user)
 
         user_dto = UserUpdate(
             name=name,
