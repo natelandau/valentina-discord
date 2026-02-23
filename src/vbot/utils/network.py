@@ -9,7 +9,7 @@ from aiohttp import ClientSession
 from vbot.lib import exceptions
 
 
-async def fetch_data_from_url(url: str) -> io.BytesIO:  # pragma: no cover
+async def fetch_data_from_url(url: str) -> io.BytesIO:
     """Fetch data from a URL and return it as a BytesIO object.
 
     Retrieve data from a specified URL and return it as a BytesIO object, which can be used for further processing or uploading to services like Amazon S3.
