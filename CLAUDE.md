@@ -1,7 +1,5 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
 ## Project Overview
 
 Valentina Discord Bot (`vbot`) is a Discord bot for playing White Wolf TTRPGs. It connects to a central Valentina API for data persistence and uses a local SQLite database as a cache. The bot is built with py-cord (Discord.py fork) using the cogs pattern for command organization.
@@ -9,9 +7,9 @@ Valentina Discord Bot (`vbot`) is a Discord bot for playing White Wolf TTRPGs. I
 ## Commands
 
 ```bash
-uv run ruff format .                      # Format code
-uv run ruff check .                       # Check code without fixing
-uv run mypy src/                          # Run mypy type checking
+uv run ruff format .                      # Format python code
+uv run ruff check .                       # Check python code without fixing
+uv run mypy src/                          # Run mypy type checking for python code
 uv run duty lint                          # Run all linting (ruff, mypy, typos, format)
 uv run duty test                          # Run tests with coverage
 uv run duty clean                         # Clean build artifacts
@@ -26,11 +24,12 @@ uv run pytest tests/ -k "test_name_pattern" -x
 
 ### Core Components
 
+- **Config** (`src/vbot/config/`): Application settings via pydantic-settings (`base.py`) and Tortoise ORM database configuration (`db.py`)
 - **Bot** (`src/vbot/bot/`): Main bot class extending `commands.Bot` with custom context classes (`ValentinaContext`, `ValentinaAutocompleteContext`) that provide API user resolution
-- **Cogs** (`src/vbot/cogs/`): Thin command definitions organized by domain (admin, campaign, character, gameplay, user, developer, events, storyteller). Each cog has a `cog.py` with slash commands and optional `autocompletion.py`
+- **Cogs** (`src/vbot/cogs/`): Thin command definitions organized by domain (admin, campaign, character, gameplay, user, developer, events, storyteller). Each cog has a `cog.py` with slash commands. Shared modules at the cogs level include `autocompletion.py` (common autocomplete helpers) and `validators.py`. Individual cogs may have their own `autocomplete.py` (e.g., admin)
 - **Views** (`src/vbot/views/`): Reusable Discord UI primitives — buttons, embeds, modals, select menus
-- **Workflows** (`src/vbot/workflows/`): Multi-step Discord interaction flows — character creation wizards (autogeneration, manual entry, quick gen), trait reallocation, character sheet display, campaign viewer, dice rolls, confirmation actions
-- **Handlers** (`src/vbot/handlers/`): API/DB sync layer — bridges between `vclient` API services and the local SQLite cache (book, campaign, character, user, database handlers)
+- **Workflows** (`src/vbot/workflows/`): Multi-step Discord interaction flows — character creation wizards (autogeneration, manual entry, quick gen), trait reallocation, character sheet display, campaign viewer, dice rolls, asset review, confirmation actions
+- **Handlers** (`src/vbot/handlers/`): API/DB sync layer — bridges between `vclient` API services and the local SQLite cache (assets, book, campaign, character, user, database handlers)
 - **Lib** (`src/vbot/lib/`): Core library modules - `ChannelManager` (campaign channel lifecycle), `character_sheet_builder`, `exceptions`, `validation`, `logging`
 - **Utils** (`src/vbot/utils/`): Utility functions - Discord helpers (`set_user_role`, `assert_permissions`, `fetch_channel_object`), string formatting (`num_to_circles`, `truncate_string`), time helpers
 - **DB Models** (`src/vbot/db/models/`): Tortoise ORM models for local SQLite cache (Server, DBUser, DBCampaign, DBCharacter, DBCampaignBook)
@@ -50,27 +49,6 @@ uv run pytest tests/ -k "test_name_pattern" -x
 - **Confirmation Actions**: Use `confirm_action()` from workflows for destructive operations
 - **Channel Management**: `ChannelManager` creates/manages campaign-specific Discord channels
 
-## Configuration
-
-Settings loaded via pydantic-settings from environment variables with prefix `VALBOT_`:
-
-- `VALBOT_DISCORD__TOKEN` - Discord bot token
-- `VALBOT_DISCORD__GUILDS` - Comma-separated guild IDs
-- `VALBOT_DISCORD__OWNER_IDS` - Comma-separated owner Discord IDs
-- `VALBOT_DISCORD__OWNER_CHANNELS` - Comma-separated owner channel IDs
-- `VALBOT_API_SERVICE__URL` - Valentina API URL
-- `VALBOT_API_SERVICE__API_KEY` - API key
-- `VALBOT_API_SERVICE__COMPANY_ID` - Company ID
-- `VALBOT_DATABASE_PATH` - SQLite database path (default: `data/database.db`)
-- `VALBOT_LOG_FILE_PATH` - Log file path
-- `VALBOT_LOG_LEVEL` - Log level (TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL)
-
-## External Dependencies
-
-- **valentina-python-client** (`vclient`): Python client for Valentina API. Services accessed via `users_service()`, `characters_service()`, `campaigns_service()`, etc.
-- **py-cord**: Discord API wrapper (not discord.py)
-- **Tortoise ORM**: Async ORM for SQLite database
-
 ## Testing
 
 - Tests use Tortoise ORM with in-memory SQLite via `tortoise_test_context` fixture (`tests/conftest.py`)
@@ -82,14 +60,9 @@ Settings loaded via pydantic-settings from environment variables with prefix `VA
 
 Domain types shared with the Valentina API (e.g., `CharacterClass`, `CharacterStatus`, `CharacterType`, `GameVersion`, `UserRole`, `DiceSize`) are `Literal` type aliases imported from `vclient.constants`. They are plain strings (or ints for `DiceSize`) — not Enums. Use string comparisons (`character.type == "PLAYER"`) and `get_args()` when you need to iterate over valid values.
 
-Bot-only types in `src/vbot/constants.py` remain as local Enums: `EmojiDict`, `EmbedColor`, `ChannelPermission`, `CampaignChannelName`, `LogLevel`.
+Bot-only types in `src/vbot/constants.py`: `EmbedColor`, `ChannelPermission`, `CampaignChannelName`, `LogLevel` are Enums. `EmojiDict` is a plain class (not an Enum) used as a namespace for emoji constants.
 
 ## Gotchas
 
-- **Environment files**: Settings loads from `.env` and `.env.secret` (both in project root, gitignored)
+- **Environment files**: Settings loads from `.env.secret` (project root, gitignored) using the `VALBOT_` prefix with `__` as the nested delimiter (e.g., `VALBOT_DISCORD__TOKEN`, `VALBOT_API__BASE_URL`)
 - **vclient imports at call site**: Some vclient imports (e.g., `users_service`, `options_service`) are done inside functions rather than at module level to avoid circular imports and startup failures
-
-## Documentation and Resources
-
-- **Valentina Python Client Documentation**: https://docs.valentina-noir.com/python-api-client/
-- **Valentina Python Client Codebase**: ../valentina-python-client/

@@ -1,11 +1,11 @@
 FROM ghcr.io/astral-sh/uv:0.10.4-python3.13-trixie-slim
 
 # Set labels
-LABEL org.opencontainers.image.source=https://github.com/natelandau/valentina-noir
-LABEL org.opencontainers.image.description="Valentina Noir"
+LABEL org.opencontainers.image.source=https://github.com/natelandau/valentina-discord
+LABEL org.opencontainers.image.description="Valentina Discord Bot"
 LABEL org.opencontainers.image.licenses=MIT
-LABEL org.opencontainers.image.url=https://github.com/natelandau/valentina-noir
-LABEL org.opencontainers.image.title="Valentina Noir"
+LABEL org.opencontainers.image.url=https://github.com/natelandau/valentina-discord
+LABEL org.opencontainers.image.title="Valentina Discord"
 
 # Install Apt Packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
