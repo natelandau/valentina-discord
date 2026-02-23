@@ -2,6 +2,7 @@
 
 from .discord import (
     assert_permissions,
+    build_discord_profile,
     fetch_channel_object,
     get_discord_member_from_api_user_id,
     set_channel_perms,
@@ -13,6 +14,7 @@ from .time import time_now
 
 __all__ = (
     "assert_permissions",
+    "build_discord_profile",
     "experience_to_markdown",
     "fetch_channel_object",
     "fetch_data_from_url",

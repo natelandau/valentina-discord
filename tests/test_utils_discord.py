@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import discord
 
+from vclient.models import DiscordProfile
+
 from vbot.constants import ChannelPermission
 from vbot.db.models import DBCampaign, DBCampaignBook, DBCharacter
-from vbot.utils.discord import ChannelObjects, set_channel_perms
+from vbot.utils.discord import ChannelObjects, build_discord_profile, set_channel_perms
 
 
 class TestSetChannelPerms:
@@ -127,3 +129,33 @@ class TestChannelObjects:
             is_storyteller_channel=True,
         )
         assert bool(obj) is False
+
+
+class TestBuildDiscordProfile:
+    """Tests for build_discord_profile()."""
+
+    def test_builds_profile_from_member(self, mock_discord_member):
+        """Verify all DiscordProfile fields populated from member attributes."""
+        # When: building a profile from a discord member
+        result = build_discord_profile(mock_discord_member)
+
+        # Then: all fields are set correctly
+        assert isinstance(result, DiscordProfile)
+        assert result.id == str(mock_discord_member.id)
+        assert result.username == mock_discord_member.name
+        assert result.global_name == mock_discord_member.global_name
+        assert result.avatar_id == str(mock_discord_member.avatar.key)
+        assert result.avatar_url == mock_discord_member.avatar.url
+        assert result.discriminator == mock_discord_member.discriminator
+
+    def test_handles_no_avatar(self, mock_discord_member):
+        """Verify avatar fields are None when member has no avatar."""
+        # Given: member has no avatar
+        mock_discord_member.avatar = None
+
+        # When: building a profile
+        result = build_discord_profile(mock_discord_member)
+
+        # Then: avatar fields are None
+        assert result.avatar_id is None
+        assert result.avatar_url is None
