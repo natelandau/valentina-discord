@@ -1,0 +1,23 @@
+---
+services:
+  vbot:
+    build: .
+    hostname: vbot
+    container_name: vbot
+    env_file:
+      - .env.secret
+    volumes:
+      - .dev:/app/.dev
+    develop:
+      watch:
+        - action: rebuild
+          path: ./src
+          target: /app/src
+        - action: rebuild
+          path: ./uv.lock
+          target: /app/uv.lock
+        - action: rebuild
+          path: ./pyproject.toml
+          target: /app/pyproject.toml
+        - action: rebuild
+          path: ./Dockerfile
