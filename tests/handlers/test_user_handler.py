@@ -53,14 +53,14 @@ class TestCreateUser:
     async def test_creates_user(self, db, mock_users_service, mock_discord_member):
         """Verify DiscordProfile built, API called, and DB synced."""
         # Given: the API returns a created user
-        user = make_user(id="u-001", name="New User", email="new@example.com")
+        user = make_user(id="u-001", username="newuser", email="new@example.com")
         mock_users_service._service.create.return_value = user
 
         # When: creating a user
         result = await user_api_handler.create_user(
             discord_user=mock_discord_member,
             requesting_user_api_id="admin-001",
-            name="New User",
+            username="newuser",
             email="new@example.com",
             role="PLAYER",
         )
@@ -69,7 +69,7 @@ class TestCreateUser:
         mock_users_service._service.create.assert_awaited_once()
         call_kwargs = mock_users_service._service.create.call_args[1]
         request = call_kwargs["request"]
-        assert request.name == "New User"
+        assert request.username == "newuser"
         assert request.email == "new@example.com"
         assert request.role == "PLAYER"
         assert request.requesting_user_id == "admin-001"
@@ -82,19 +82,19 @@ class TestCreateUser:
         db_user = await DBUser.get_or_none(discord_user_id=mock_discord_member.id)
         assert db_user is not None
         assert db_user.api_user_id == "u-001"
-        assert result.name == "New User"
+        assert result.username == "newuser"
 
     async def test_db_sync_fields(self, db, mock_users_service, mock_discord_member):
         """Verify DBUser record created with correct fields."""
         # Given: the API returns a user with specific fields
-        user = make_user(id="u-042", name="Jane", email="jane@example.com", role="ADMIN")
+        user = make_user(id="u-042", username="jane", email="jane@example.com", role="ADMIN")
         mock_users_service._service.create.return_value = user
 
         # When: creating the user
         await user_api_handler.create_user(
             discord_user=mock_discord_member,
             requesting_user_api_id="admin-001",
-            name="Jane",
+            username="jane",
             email="jane@example.com",
             role="ADMIN",
         )
@@ -102,7 +102,7 @@ class TestCreateUser:
         # Then: DBUser has all correct fields
         db_user = await DBUser.get(discord_user_id=mock_discord_member.id)
         assert db_user.api_user_id == "u-042"
-        assert db_user.name == "Jane"
+        assert db_user.username == "jane"
         assert db_user.email == "jane@example.com"
 
 
@@ -112,7 +112,7 @@ class TestUpdateUser:
     async def test_updates_user(self, db, mock_users_service, mock_discord_member):
         """Verify UserUpdate DTO constructed and API called."""
         # Given: the API returns an updated user
-        user = make_user(id="u-001", name="Updated Name")
+        user = make_user(id="u-001", username="updateduser")
         mock_users_service._service.update.return_value = user
 
         # When: updating the user
@@ -120,7 +120,7 @@ class TestUpdateUser:
             user_api_id="u-001",
             discord_user=mock_discord_member,
             requesting_user_api_id="admin-001",
-            name="Updated Name",
+            username="updateduser",
         )
 
         # Then: API was called with correct args
@@ -128,13 +128,13 @@ class TestUpdateUser:
         call_kwargs = mock_users_service._service.update.call_args[1]
         assert call_kwargs["user_id"] == "u-001"
         request = call_kwargs["request"]
-        assert request.name == "Updated Name"
+        assert request.username == "updateduser"
         assert request.requesting_user_id == "admin-001"
 
         # Then: user is synced to DB
         db_user = await DBUser.get_or_none(discord_user_id=mock_discord_member.id)
         assert db_user is not None
-        assert result.name == "Updated Name"
+        assert result.username == "updateduser"
 
 
 class TestDeleteUser:
@@ -146,7 +146,7 @@ class TestDeleteUser:
         await DBUser.create(
             discord_user_id=123456789,
             api_user_id="u-001",
-            name="Test User",
+            username="testuser",
             role="PLAYER",
         )
 

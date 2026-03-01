@@ -941,7 +941,7 @@ class CharacterCog(commands.Cog):
         db_current_owner = await get_valid_linked_db_user(ctx.author)
 
         title = f"Transfer character: `{character.name}` to {new_owner.display_name}"
-        description = f"This action will transfer the character `{character.name}` from `{db_current_owner.name}` to `{new_owner.display_name}`."
+        description = f"This action will transfer the character `{character.name}` from `{db_current_owner.username}` to `{new_owner.display_name}`."
         is_confirmed, msg, confirmation_embed = await confirm_action(
             ctx=ctx, title=title, description=description, hidden=hidden
         )
@@ -957,7 +957,7 @@ class CharacterCog(commands.Cog):
         )
         await character_handler.update_or_create_character_in_db(updated_character)
 
-        confirmation_embed.description = f"Character `{character.name}` transferred from `{db_current_owner.name}` to `{new_owner.display_name}` successfully."
+        confirmation_embed.description = f"Character `{character.name}` transferred from `{db_current_owner.username}` to `{new_owner.display_name}` successfully."
         await msg.edit_original_response(embed=confirmation_embed, view=None)
 
     @admin.command(name="delete", description="Delete a character")

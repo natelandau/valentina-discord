@@ -43,7 +43,7 @@ class UserAPIHandler:
             discord_user_id=user.discord_profile.id,
             defaults={
                 "api_user_id": user.id,
-                "name": user.name,
+                "username": user.username,
                 "email": user.email,
                 "role": user.role,
             },
@@ -53,7 +53,7 @@ class UserAPIHandler:
             logger.debug(
                 "Create user in database.",
                 user_id=user.id,
-                user_name=user.name,
+                user_name=user.username,
             )
 
         return db_user
@@ -66,12 +66,14 @@ class UserAPIHandler:
         """Get the user from the API."""
         return await users_service().get(user_api_id)
 
-    async def create_user(
+    async def create_user(  # noqa: PLR0913
         self,
         *,
         discord_user: discord.Member | discord.User,
         requesting_user_api_id: str,
-        name: str,
+        username: str,
+        name_first: str | None = None,
+        name_last: str | None = None,
         email: str,
         role: UserRole,
     ) -> User:
@@ -80,7 +82,10 @@ class UserAPIHandler:
         Args:
             discord_user (discord.Member | discord.User): The Discord user to create.
             requesting_user_api_id (str): The API ID of the user requesting the creation.
-            name (str): The name of the user to create.
+
+            username (str): The username of the user to create.
+            name_first (str): The first name of the user to create.
+            name_last (str): The last name of the user to create.
             email (str): The email of the user to create.
             role (UserRole): The role of the user to create.
 
@@ -90,7 +95,9 @@ class UserAPIHandler:
         discord_profile = build_discord_profile(discord_user)
 
         user_dto = UserCreate(
-            name=name,
+            username=username,
+            name_first=name_first,
+            name_last=name_last,
             email=email,
             role=role,
             discord_profile=discord_profile,
@@ -103,13 +110,15 @@ class UserAPIHandler:
 
         return user
 
-    async def update_user(
+    async def update_user(  # noqa: PLR0913
         self,
         *,
         user_api_id: str,
         discord_user: discord.Member | discord.User,
         requesting_user_api_id: str,
-        name: str | None = None,
+        username: str | None = None,
+        name_first: str | None = None,
+        name_last: str | None = None,
         email: str | None = None,
         role: UserRole | None = None,
     ) -> User:
@@ -119,7 +128,9 @@ class UserAPIHandler:
             user_api_id (str): The API ID of the user to update.
             discord_user (discord.Member | discord.User): The Discord user to update.
             requesting_user_api_id (str): The API ID of the user requesting the update.
-            name (str | None): The name of the user to update.
+            username (str | None): The username of the user to update.
+            name_first (str | None): The first name of the user to update.
+            name_last (str | None): The last name of the user to update.
             email (str | None): The email of the user to update.
             role (UserRole | None): The role of the user to update.
 
@@ -129,8 +140,10 @@ class UserAPIHandler:
         discord_profile = build_discord_profile(discord_user)
 
         user_dto = UserUpdate(
-            name=name,
-            email=email,
+            username=username or None,
+            name_first=name_first or None,
+            name_last=name_last or None,
+            email=email or None,
             role=role or None,
             discord_profile=discord_profile,
             requesting_user_id=requesting_user_api_id,

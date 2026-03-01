@@ -126,8 +126,8 @@ class AdminCog(commands.Cog):
 
         api_user = await user_api_handler.get_user(api_user_id)
 
-        title = f"Link {ctx.author.name} (you) to {api_user.name}"
-        description = f"This will allow {ctx.author.name} to administer this server via Valentina.\n\nAre you sure you want to link `{ctx.author.name}` to `{api_user.name}`?"
+        title = f"Link {ctx.author.name} (you) to {api_user.username}"
+        description = f"This will allow {ctx.author.name} to administer this server via Valentina.\n\nAre you sure you want to link `{ctx.author.name}` to `{api_user.username}`?"
         is_confirmed, msg, confirmation_embed = await confirm_action(
             ctx, title=title, description=description, hidden=hidden
         )
@@ -147,7 +147,9 @@ class AdminCog(commands.Cog):
             role=api_user.role,
         )
 
-        confirmation_embed.description = f"{ctx.author.name} has been linked to {api_user.name}."
+        confirmation_embed.description = (
+            f"{ctx.author.name} has been linked to {api_user.username}."
+        )
         await msg.edit_original_response(embed=confirmation_embed, view=None)
 
     @user.command(name="link", description="Link a Discord user to an existing Valentina user.")
@@ -200,8 +202,8 @@ class AdminCog(commands.Cog):
         new_api_user = await user_api_handler.get_user(api_user_id)
         requesting_user_api_id = await ctx.get_api_user_id()
 
-        title = f"Link {discord_user.name} user to {new_api_user.name}"
-        description = f"This will allow {discord_user.name} to use commands in this server.\n\nAre you sure you want to link {discord_user.name} to {new_api_user.name}?"
+        title = f"Link {discord_user.name} user to {new_api_user.username}"
+        description = f"This will allow {discord_user.name} to use commands in this server.\n\nAre you sure you want to link {discord_user.name} to {new_api_user.username}?"
         is_confirmed, msg, confirmation_embed = await confirm_action(
             ctx, title=title, description=description, hidden=hidden
         )
@@ -219,7 +221,7 @@ class AdminCog(commands.Cog):
         )
 
         confirmation_embed.description = (
-            f"{discord_user.name} has been linked to {new_api_user.name}."
+            f"{discord_user.name} has been linked to {new_api_user.username}."
         )
         await msg.edit_original_response(embed=confirmation_embed, view=None)
 
@@ -322,11 +324,16 @@ class AdminCog(commands.Cog):
 
         name = re.sub(r"[^-_a-zA-Z0-9\s]", "", modal.name.strip()).title()
         email = modal.email.strip()
+        username = modal.username.strip()
+        name_first = modal.name_first.strip() if modal.name_first else None
+        name_last = modal.name_last.strip() if modal.name_last else None
 
         await user_api_handler.create_user(
             discord_user=discord_user,
             requesting_user_api_id=requesting_user_api_id,
-            name=name,
+            username=username,
+            name_first=name_first,
+            name_last=name_last,
             email=email,
             role=cast("UserRole", role),
         )

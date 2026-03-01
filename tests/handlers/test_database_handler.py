@@ -155,7 +155,9 @@ class TestUpdateOrCreateUser:
     async def test_creates_new(self, db):
         """Verify creates a new DBUser from API User + discord_user."""
         # Given: a user DTO and a discord member mock
-        user = make_user(id="user-001", name="Test User", email="test@example.com", role="PLAYER")
+        user = make_user(
+            id="user-001", username="testuser", email="test@example.com", role="PLAYER"
+        )
         discord_user = MagicMock()
         discord_user.id = 123456789
 
@@ -165,7 +167,7 @@ class TestUpdateOrCreateUser:
         # Then: a new DB record is created with correct fields
         assert result.api_user_id == "user-001"
         assert result.discord_user_id == 123456789
-        assert result.name == "Test User"
+        assert result.username == "testuser"
         assert result.email == "test@example.com"
         assert result.role == "PLAYER"
 
@@ -175,12 +177,12 @@ class TestUpdateOrCreateUser:
         await DBUser.create(
             discord_user_id=123456789,
             api_user_id="user-001",
-            name="Old Name",
+            username="olduser",
             role="PLAYER",
         )
 
-        # Given: a user DTO with updated name
-        user = make_user(id="user-001", name="New Name", email="new@example.com", role="ADMIN")
+        # Given: a user DTO with updated username
+        user = make_user(id="user-001", username="newuser", email="new@example.com", role="ADMIN")
         discord_user = MagicMock()
         discord_user.id = 123456789
 
@@ -188,7 +190,7 @@ class TestUpdateOrCreateUser:
         result = await database_handler.update_or_create_user(user, discord_user=discord_user)
 
         # Then: the existing record is updated
-        assert result.name == "New Name"
+        assert result.username == "newuser"
         assert result.email == "new@example.com"
         assert await DBUser.filter(discord_user_id=123456789).count() == 1
 

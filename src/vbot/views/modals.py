@@ -241,10 +241,28 @@ class UserModal(Modal):
 
         self.add_item(
             InputText(
-                label="name",
+                label="username",
                 placeholder="Enter a name for the user",
-                value=user.name if user else None,
+                value=user.username if user else None,
                 required=True,
+                style=discord.InputTextStyle.short,
+            ),
+        )
+        self.add_item(
+            InputText(
+                label="name_first",
+                placeholder="First Name",
+                value=user.name_first if user else None,
+                required=False,
+                style=discord.InputTextStyle.short,
+            ),
+        )
+        self.add_item(
+            InputText(
+                label="name_last",
+                placeholder="Last Name",
+                value=user.name_last if user else None,
+                required=False,
                 style=discord.InputTextStyle.short,
             ),
         )
@@ -261,7 +279,9 @@ class UserModal(Modal):
     async def callback(self, interaction: discord.Interaction) -> None:
         """Callback for the modal."""
         view = ConfirmCancelButtons(interaction.user)
-        self.name = self.children[0].value
+        self.username = self.children[0].value
+        self.name_first = self.children[1].value
+        self.name_last = self.children[2].value
         self.email = self.children[1].value
 
         embed = discord.Embed(title="Confirm User", color=EmbedColor.INFO.value)

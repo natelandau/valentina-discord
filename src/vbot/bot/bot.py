@@ -68,7 +68,7 @@ class Valentina(commands.Bot):
                 if not member.bot:
                     _, updated = await DBUser.update_or_create(
                         discord_user_id=member.id,
-                        defaults={"name": member.display_name, "role": "PLAYER"},
+                        defaults={"username": member.display_name, "role": "PLAYER"},
                     )
                     if updated:
                         logger.debug(f"DATABASE: Updated user `{member.display_name}`")

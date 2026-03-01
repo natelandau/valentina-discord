@@ -107,7 +107,7 @@ class DatabaseHandler:
             discord_user_id=discord_user.id,
             defaults={
                 "api_user_id": user.id,
-                "name": user.name,
+                "username": user.username,
                 "email": user.email,
                 "role": user.role,
             },
@@ -115,7 +115,7 @@ class DatabaseHandler:
         if created:
             logger.debug(
                 "Create user in database.",
-                name=db_user.name,
+                username=db_user.username,
                 api_id=db_user.api_user_id,
             )
 
