@@ -61,7 +61,7 @@ class UserCog(commands.Cog):
 
         target_user = await get_valid_linked_db_user(discord_user or ctx.author)
 
-        title = f"Add `{amount}` xp to `{target_user.name}` in `{campaign.name}`"
+        title = f"Add `{amount}` xp to `{target_user.username}` in `{campaign.name}`"
         is_confirmed, msg, confirmation_embed = await confirm_action(
             ctx=ctx, title=title, hidden=hidden
         )
@@ -76,7 +76,7 @@ class UserCog(commands.Cog):
         )
 
         confirmation_embed.title = (
-            f"Experience added successfully to `{target_user.name}` in `{campaign.name}`"
+            f"Experience added successfully to `{target_user.username}` in `{campaign.name}`"
         )
         confirmation_embed.description = "### Experience\n" + experience_to_markdown(
             campaign_experience
@@ -115,7 +115,7 @@ class UserCog(commands.Cog):
 
         target_user = await get_valid_linked_db_user(discord_user or ctx.author)
 
-        title = f"Add `{amount}` cool point to `{target_user.name}` in `{campaign.name}`"
+        title = f"Add `{amount}` cool point to `{target_user.username}` in `{campaign.name}`"
         is_confirmed, msg, confirmation_embed = await confirm_action(
             ctx=ctx, title=title, hidden=hidden
         )
@@ -130,7 +130,7 @@ class UserCog(commands.Cog):
         )
 
         confirmation_embed.title = (
-            f"Cool point(s) added successfully to `{target_user.name}` in `{campaign.name}`"
+            f"Cool point(s) added successfully to `{target_user.username}` in `{campaign.name}`"
         )
         confirmation_embed.description = "### Experience\n" + experience_to_markdown(
             campaign_experience
@@ -156,7 +156,7 @@ class UserCog(commands.Cog):
         user_dto = await users_service().get(user_id=db_user.api_user_id)
         user_statistics_dto = await users_service().get_statistics(user_id=db_user.api_user_id)
 
-        embed = discord.Embed(title=f"{user_dto.name}'s profile", color=EmbedColor.INFO.value)
+        embed = discord.Embed(title=f"{user_dto.username}'s profile", color=EmbedColor.INFO.value)
         embed.set_thumbnail(url=discord_user.display_avatar.url)
 
         embed.add_field(name="Email", value=user_dto.email, inline=True)

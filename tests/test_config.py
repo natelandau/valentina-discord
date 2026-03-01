@@ -39,7 +39,8 @@ class TestSettingsFromEnvVars:
 
     def test_minimal_required_env_vars(self, monkeypatch):
         """Verify Settings constructs with required env vars and applies defaults."""
-        # Given: only the required env vars are set
+        # Given: only the required env vars are set (override .env.secret values
+        # to isolate the test from the local dev environment)
         monkeypatch.setenv("VALBOT_DISCORD__TOKEN", "test-token-123")
         monkeypatch.setenv("VALBOT_DISCORD__GUILDS", "111,222")
         monkeypatch.setenv("VALBOT_DISCORD__OWNER_IDS", "333")
@@ -47,9 +48,8 @@ class TestSettingsFromEnvVars:
         monkeypatch.setenv("VALBOT_API__BASE_URL", "http://localhost:8000")
         monkeypatch.setenv("VALBOT_API__API_KEY", "test-key")
         monkeypatch.setenv("VALBOT_API__DEFAULT_COMPANY_ID", "company-001")
-
-        # When: constructing Settings
-        s = Settings()
+        # When: constructing Settings (skip .env.secret to test pure defaults)
+        s = Settings(_env_file=None)
 
         # Then: required fields are populated
         assert s.discord.token == "test-token-123"  # noqa: S105
@@ -139,4 +139,4 @@ class TestSettingsFromEnvVars:
 
         # When/Then: constructing Settings raises ValidationError
         with pytest.raises(ValidationError, match="Field required"):
-            Settings()
+            Settings(_env_file=None)

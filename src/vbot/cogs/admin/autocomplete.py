@@ -35,9 +35,9 @@ async def select_api_user_all(ctx: ValentinaAutocompleteContext) -> list[OptionC
     argument = ctx.options.get("user") or ""
 
     return [
-        OptionChoice(user.name, str(user.id))
-        for user in sorted(users, key=lambda x: x.name)
-        if user.name.lower().startswith(argument.lower())
+        OptionChoice(user.username, str(user.id))
+        for user in sorted(users, key=lambda x: x.username)
+        if user.username.lower().startswith(argument.lower())
     ][:MAX_OPTION_LIST_SIZE]
 
 
@@ -70,7 +70,7 @@ async def select_api_user_unlinked(ctx: ValentinaAutocompleteContext) -> list[Op
     argument = ctx.options.get("user") or ""
 
     return [
-        OptionChoice(user.name, str(user.id))
-        for user in sorted(unlinked_users, key=lambda x: x.name)
-        if user.name.lower().startswith(argument.lower())
+        OptionChoice(user.username, str(user.id))
+        for user in sorted(unlinked_users, key=lambda x: x.username)
+        if user.username.lower().startswith(argument.lower())
     ][:MAX_OPTION_LIST_SIZE]

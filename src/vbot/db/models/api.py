@@ -14,7 +14,7 @@ class DBUser(Model):
     email = fields.CharField(max_length=255, description="The email of the user.", null=True)
     role = fields.CharField(max_length=25, default="PLAYER")
 
-    name = fields.CharField(max_length=255, description="The name of the user.", null=True)
+    username = fields.CharField(max_length=255, description="The username of the user.", null=True)
 
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
