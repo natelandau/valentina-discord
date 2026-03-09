@@ -3,13 +3,18 @@
 from __future__ import annotations
 
 import pytest
+from vclient.models import DiscordProfile
+from vclient.testing import UserFactory
 
-from tests.factories import make_user
 from vbot.db.models import DBUser
 from vbot.handlers.user import user_api_handler
 from vbot.lib.exceptions import ValidationError
 
 pytestmark = pytest.mark.anyio
+
+_DISCORD_PROFILE = DiscordProfile(
+    id="123456789", username="testuser", global_name="Test User", discriminator="0"
+)
 
 
 class TestListUsers:
@@ -18,7 +23,7 @@ class TestListUsers:
     async def test_delegates_to_api(self, mock_users_service):
         """Verify delegates to users_service().list_all()."""
         # Given: the API returns users
-        users = [make_user(id="u-001"), make_user(id="u-002")]
+        users = [UserFactory.build(id="u-001"), UserFactory.build(id="u-002")]
         mock_users_service._service.list_all.return_value = users
 
         # When: listing users
@@ -36,7 +41,7 @@ class TestGetUser:
     async def test_delegates_to_api(self, mock_users_service):
         """Verify delegates to users_service().get()."""
         # Given: the API returns a user
-        user = make_user(id="u-001")
+        user = UserFactory.build(id="u-001")
         mock_users_service._service.get.return_value = user
 
         # When: getting a user
@@ -53,7 +58,13 @@ class TestCreateUser:
     async def test_creates_user(self, db, mock_users_service, mock_discord_member):
         """Verify DiscordProfile built, API called, and DB synced."""
         # Given: the API returns a created user
-        user = make_user(id="u-001", username="newuser", email="new@example.com")
+        user = UserFactory.build(
+            id="u-001",
+            username="newuser",
+            email="new@example.com",
+            role="PLAYER",
+            discord_profile=_DISCORD_PROFILE,
+        )
         mock_users_service._service.create.return_value = user
 
         # When: creating a user
@@ -87,7 +98,13 @@ class TestCreateUser:
     async def test_db_sync_fields(self, db, mock_users_service, mock_discord_member):
         """Verify DBUser record created with correct fields."""
         # Given: the API returns a user with specific fields
-        user = make_user(id="u-042", username="jane", email="jane@example.com", role="ADMIN")
+        user = UserFactory.build(
+            id="u-042",
+            username="jane",
+            email="jane@example.com",
+            role="ADMIN",
+            discord_profile=_DISCORD_PROFILE,
+        )
         mock_users_service._service.create.return_value = user
 
         # When: creating the user
@@ -112,7 +129,12 @@ class TestUpdateUser:
     async def test_updates_user(self, db, mock_users_service, mock_discord_member):
         """Verify UserUpdate DTO constructed and API called."""
         # Given: the API returns an updated user
-        user = make_user(id="u-001", username="updateduser")
+        user = UserFactory.build(
+            id="u-001",
+            username="updateduser",
+            role="PLAYER",
+            discord_profile=_DISCORD_PROFILE,
+        )
         mock_users_service._service.update.return_value = user
 
         # When: updating the user
@@ -168,7 +190,7 @@ class TestUpdateOrCreateUserValidation:
     async def test_no_discord_profile_raises(self, db, mock_users_service):
         """Verify raises ValidationError when user has no discord_profile."""
         # Given: a user DTO with no discord profile
-        user = make_user(id="u-001", discord_profile=None)
+        user = UserFactory.build(id="u-001", discord_profile=None)
 
         # When/Then: raises ValidationError
         with pytest.raises(ValidationError, match="Discord profile"):
