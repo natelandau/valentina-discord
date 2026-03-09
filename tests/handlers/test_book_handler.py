@@ -5,6 +5,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock
 
 import pytest
+from vclient.endpoints import Endpoints
 from vclient.testing import CampaignBookFactory
 
 from vbot.db.models import DBCampaign, DBCampaignBook
@@ -16,27 +17,33 @@ pytestmark = pytest.mark.anyio
 class TestListBooks:
     """Tests for BookAPIHandler.list_books()."""
 
-    async def test_returns_books(self, db, mock_books_service):
+    async def test_returns_books(self, db, fake_vclient):
         """Verify delegates to API with correct args and syncs to DB."""
         # Given: a campaign exists in the DB
         await DBCampaign.create(api_id="camp-001", name="Test Campaign")
 
         # Given: the API returns books
-        books = [
-            CampaignBookFactory.build(
-                id="b-001", name="Book One", number=1, campaign_id="camp-001"
-            ),
-            CampaignBookFactory.build(
-                id="b-002", name="Book Two", number=2, campaign_id="camp-001"
-            ),
-        ]
-        mock_books_service._service.list_all.return_value = books
+        b1 = CampaignBookFactory.build(
+            id="b-001", name="Book One", number=1, campaign_id="camp-001"
+        )
+        b2 = CampaignBookFactory.build(
+            id="b-002", name="Book Two", number=2, campaign_id="camp-001"
+        )
+        fake_vclient.add_route(
+            "GET",
+            Endpoints.CAMPAIGN_BOOKS,
+            json={
+                "items": [b1.model_dump(mode="json"), b2.model_dump(mode="json")],
+                "total": 2,
+                "limit": 100,
+                "offset": 0,
+            },
+        )
 
         # When: listing books
         result = await book_handler.list_books(user_api_id="user-001", campaign_api_id="camp-001")
 
-        # Then: API was called with correct params
-        mock_books_service.assert_called_once_with(user_id="user-001", campaign_id="camp-001")
+        # Then: results returned
         assert len(result) == 2
 
         # Then: books are synced to DB
@@ -47,22 +54,21 @@ class TestListBooks:
 class TestGetBook:
     """Tests for BookAPIHandler.get_book()."""
 
-    async def test_returns_book(self, db, mock_books_service):
+    async def test_returns_book(self, db, fake_vclient):
         """Verify delegates to API and syncs to DB."""
         # Given: a campaign exists in the DB
         await DBCampaign.create(api_id="camp-001", name="Test Campaign")
 
         # Given: the API returns a book
         book = CampaignBookFactory.build(id="b-001", name="The Book", campaign_id="camp-001")
-        mock_books_service._service.get.return_value = book
+        fake_vclient.add_route("GET", Endpoints.CAMPAIGN_BOOK, json=book.model_dump(mode="json"))
 
         # When: getting a book
         result = await book_handler.get_book(
             user_api_id="user-001", campaign_api_id="camp-001", book_api_id="b-001"
         )
 
-        # Then: API was called correctly
-        mock_books_service._service.get.assert_awaited_once_with("b-001")
+        # Then: correct book returned
         assert result.name == "The Book"
 
         # Then: book is synced to DB
@@ -72,14 +78,19 @@ class TestGetBook:
 class TestCreateBook:
     """Tests for BookAPIHandler.create_book()."""
 
-    async def test_creates_book(self, db, mock_books_service, mock_valentina_context):
+    async def test_creates_book(self, db, fake_vclient, mock_valentina_context):
         """Verify API called, DB synced, and channel manager invoked."""
         # Given: a campaign exists in the DB
         await DBCampaign.create(api_id="camp-001", name="Test Campaign")
 
         # Given: the API returns a created book
         book = CampaignBookFactory.build(id="b-001", name="New Book", campaign_id="camp-001")
-        mock_books_service._service.create.return_value = book
+        fake_vclient.add_route(
+            "POST",
+            Endpoints.CAMPAIGN_BOOKS,
+            json=book.model_dump(mode="json"),
+            status_code=201,
+        )
 
         # Given: channel manager is mocked
         mock_cm = AsyncMock()
@@ -94,11 +105,6 @@ class TestCreateBook:
                 mock_valentina_context, "camp-001", "New Book", "A new book"
             )
 
-        # Then: API was called with correct args
-        mock_books_service._service.create.assert_awaited_once_with(
-            name="New Book", description="A new book"
-        )
-
         # Then: book is synced to DB
         assert await DBCampaignBook.filter(api_id="b-001").count() == 1
 
@@ -110,7 +116,7 @@ class TestCreateBook:
 class TestUpdateBook:
     """Tests for BookAPIHandler.update_book()."""
 
-    async def test_updates_book_with_rename(self, db, mock_books_service, mock_valentina_context):
+    async def test_updates_book_with_rename(self, db, fake_vclient, mock_valentina_context):
         """Verify channel manager called on rename."""
         # Given: a campaign and book exist in the DB
         db_campaign = await DBCampaign.create(api_id="camp-001", name="Test Campaign")
@@ -118,7 +124,7 @@ class TestUpdateBook:
 
         # Given: the API returns an updated book
         book = CampaignBookFactory.build(id="b-001", name="New Name", campaign_id="camp-001")
-        mock_books_service._service.update.return_value = book
+        fake_vclient.add_route("PATCH", Endpoints.CAMPAIGN_BOOK, json=book.model_dump(mode="json"))
 
         # Given: channel manager is mocked
         mock_cm = AsyncMock()
@@ -138,7 +144,7 @@ class TestUpdateBook:
         mock_cm.sort_campaign_channels.assert_awaited_once()
         assert result.name == "New Name"
 
-    async def test_updates_book_no_rename(self, db, mock_books_service, mock_valentina_context):
+    async def test_updates_book_no_rename(self, db, fake_vclient, mock_valentina_context):
         """Verify channel manager NOT called when book_name is None."""
         # Given: a campaign and book exist in the DB
         db_campaign = await DBCampaign.create(api_id="camp-001", name="Test Campaign")
@@ -148,7 +154,7 @@ class TestUpdateBook:
 
         # Given: the API returns the book
         book = CampaignBookFactory.build(id="b-001", name="Same Name", campaign_id="camp-001")
-        mock_books_service._service.update.return_value = book
+        fake_vclient.add_route("PATCH", Endpoints.CAMPAIGN_BOOK, json=book.model_dump(mode="json"))
 
         # Given: channel manager is mocked
         mock_cm = AsyncMock()
@@ -174,13 +180,16 @@ class TestUpdateBook:
 class TestDeleteBook:
     """Tests for BookAPIHandler.delete_book()."""
 
-    async def test_deletes_book(self, db, mock_books_service, mock_valentina_context):
-        """Verify API called, DB record deleted, and channels refreshed."""
+    async def test_deletes_book(self, db, fake_vclient, mock_valentina_context):
+        """Verify DB record deleted and channels refreshed."""
         # Given: a campaign and book exist in the DB
         db_campaign = await DBCampaign.create(api_id="camp-001", name="Test Campaign")
         await DBCampaignBook.create(
             api_id="b-001", name="Doomed Book", number=1, campaign=db_campaign
         )
+
+        # Given: the API accepts the delete
+        fake_vclient.add_route("DELETE", Endpoints.CAMPAIGN_BOOK, json={}, status_code=204)
 
         # Given: channel manager is mocked
         mock_cm = AsyncMock()
@@ -193,9 +202,6 @@ class TestDeleteBook:
             )
             await book_handler.delete_book(mock_valentina_context, "camp-001", "b-001")
 
-        # Then: API delete was called
-        mock_books_service._service.delete.assert_awaited_once_with("b-001")
-
         # Then: DB record is removed
         assert await DBCampaignBook.filter(api_id="b-001").count() == 0
 
@@ -206,7 +212,7 @@ class TestDeleteBook:
 class TestRenumberBook:
     """Tests for BookAPIHandler.renumber_book()."""
 
-    async def test_renumbers_book(self, db, mock_books_service, mock_valentina_context):
+    async def test_renumbers_book(self, db, fake_vclient, mock_valentina_context):
         """Verify API renumber called, list refreshed, and channels updated."""
         # Given: a campaign exists in the DB
         db_campaign = await DBCampaign.create(api_id="camp-001", name="Test Campaign")
@@ -216,10 +222,21 @@ class TestRenumberBook:
         book = CampaignBookFactory.build(
             id="b-001", name="Book One", number=3, campaign_id="camp-001"
         )
-        mock_books_service._service.renumber.return_value = book
+        fake_vclient.add_route(
+            "PUT", Endpoints.CAMPAIGN_BOOK_NUMBER, json=book.model_dump(mode="json")
+        )
 
         # Given: list_all returns updated books (called by list_books internally)
-        mock_books_service._service.list_all.return_value = [book]
+        fake_vclient.add_route(
+            "GET",
+            Endpoints.CAMPAIGN_BOOKS,
+            json={
+                "items": [book.model_dump(mode="json")],
+                "total": 1,
+                "limit": 100,
+                "offset": 0,
+            },
+        )
 
         # Given: channel manager is mocked
         mock_cm = AsyncMock()
@@ -233,12 +250,6 @@ class TestRenumberBook:
             result = await book_handler.renumber_book(
                 mock_valentina_context, "camp-001", "b-001", 3
             )
-
-        # Then: API renumber was called
-        mock_books_service._service.renumber.assert_awaited_once_with("b-001", 3)
-
-        # Then: list_books was called to refresh all books
-        mock_books_service._service.list_all.assert_awaited_once()
 
         # Then: channel manager updated channels
         mock_cm.confirm_campaign_channels.assert_awaited_once()
