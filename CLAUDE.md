@@ -58,6 +58,7 @@ uv run pytest tests/ -k "test_name_pattern" -x
   - `fake_vclient.set_response(Routes.X_GET, model=obj)` for single-object endpoints
   - `fake_vclient.set_response(Routes.X_DELETE)` for no-content (204) endpoints
   - `fake_vclient.set_error(Routes.X_GET, status_code=404)` for error responses
+  - **Path parameter matching**: Use `params={}` to return different responses for different resource IDs. Keys correspond to `{placeholders}` in the route URL pattern (e.g., `book_id`, `campaign_id`, `user_id`). Parameterized overrides take priority over generic fallbacks. Example: `fake_vclient.set_response(Routes.BOOKS_GET, model=book, params={"book_id": "b-001"})`
 - Discord objects (Member, Guild, Context) are mocked via factory fixtures in `conftest.py`
 
 ## Types and Constants

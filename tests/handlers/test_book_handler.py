@@ -199,18 +199,24 @@ class TestRenumberBook:
 
     async def test_renumbers_book(self, db, fake_vclient, mock_valentina_context):
         """Verify API renumber called, list refreshed, and channels updated."""
-        # Given: a campaign exists in the DB
+        # Given: a campaign with two books exists in the DB
         db_campaign = await DBCampaign.create(api_id="camp-001", name="Test Campaign")
         await DBCampaignBook.create(api_id="b-001", name="Book One", number=1, campaign=db_campaign)
+        await DBCampaignBook.create(api_id="b-002", name="Book Two", number=2, campaign=db_campaign)
 
-        # Given: the API returns the renumbered book
-        book = CampaignBookFactory.build(
+        # Given: the API returns the renumbered book for the specific book ID
+        renumbered = CampaignBookFactory.build(
             id="b-001", name="Book One", number=3, campaign_id="camp-001"
         )
-        fake_vclient.set_response(Routes.BOOKS_RENUMBER, model=book)
+        fake_vclient.set_response(
+            Routes.BOOKS_RENUMBER, model=renumbered, params={"book_id": "b-001"}
+        )
 
-        # Given: list_all returns updated books (called by list_books internally)
-        fake_vclient.set_response(Routes.BOOKS_LIST, items=[book])
+        # Given: the refresh list returns all books with updated numbers
+        other_book = CampaignBookFactory.build(
+            id="b-002", name="Book Two", number=1, campaign_id="camp-001"
+        )
+        fake_vclient.set_response(Routes.BOOKS_LIST, items=[other_book, renumbered])
 
         # Given: channel manager is mocked
         mock_cm = AsyncMock()
@@ -225,6 +231,14 @@ class TestRenumberBook:
                 mock_valentina_context, "camp-001", "b-001", 3
             )
 
+        # Then: the renumbered book is returned with new number
+        assert result.number == 3
+
         # Then: channel manager updated channels
         mock_cm.confirm_campaign_channels.assert_awaited_once()
-        assert result.number == 3
+
+        # Then: both books are synced to DB with updated numbers
+        db_book1 = await DBCampaignBook.get(api_id="b-001")
+        db_book2 = await DBCampaignBook.get(api_id="b-002")
+        assert db_book1.number == 3
+        assert db_book2.number == 1
