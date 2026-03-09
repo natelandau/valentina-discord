@@ -1232,7 +1232,7 @@ wheels = [
 
 [[package]]
 name = "valentina-python-client"
-version = "1.10.0"
+version = "1.11.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
@@ -1240,9 +1240,9 @@ dependencies = [
     { name = "loguru" },
     { name = "pydantic", extra = ["email"] },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/10/c4/b1d120127d881d97270407b371b40f50cb3c05731f5c9c29234e56ad9437/valentina_python_client-1.10.0.tar.gz", hash = "sha256:878bff373e30d078e02cee098e78d81cae76cb7a43298aca8660c34e02a2ee2b", size = 96119, upload-time = "2026-03-09T02:57:55.165Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f4/98/8115a50c2b878cd9b77c8cf385823e00638b1606e952cb85ea4ae40c2a37/valentina_python_client-1.11.0.tar.gz", hash = "sha256:d464b9c675a3081f11199930baabe739a83e253cf7efbb4d600e869ad11b227d", size = 97967, upload-time = "2026-03-09T18:05:15.286Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/97/5f/b99641b9db98c73b2ba406c80fe1a010d32dd9c05b59888856e213d17311/valentina_python_client-1.10.0-py3-none-any.whl", hash = "sha256:92bf3a05ef4120eb60b9f8aa9ab74c78f4d46889a3b3b4119f93f8c271ee0400", size = 145316, upload-time = "2026-03-09T02:57:54.158Z" },
+    { url = "https://files.pythonhosted.org/packages/82/6a/62cb485b29a366446203f725691ef6afa02d9a8c833406abaee2584c38c4/valentina_python_client-1.11.0-py3-none-any.whl", hash = "sha256:92abf5163189d1d7b46787bc67b20fb253545fcffe99bc45510445402fef01bd", size = 147112, upload-time = "2026-03-09T18:05:13.576Z" },
 ]
 
 [package.optional-dependencies]
@@ -1308,7 +1308,7 @@ requires-dist = [
     { name = "rich", specifier = ">=14.3.3" },
     { name = "semver", specifier = ">=3.0.4" },
     { name = "tortoise-orm", specifier = ">=1.1.6" },
-    { name = "valentina-python-client", extras = ["testing"], specifier = ">=1.10.0" },
+    { name = "valentina-python-client", extras = ["testing"], specifier = ">=1.11.0" },
 ]
 
 [package.metadata.requires-dev]

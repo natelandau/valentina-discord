@@ -15,7 +15,7 @@
         "rich>=14.3.3",
         "semver>=3.0.4",
         "tortoise-orm>=1.1.6",
-        "valentina-python-client[testing]>=1.10.0",
+        "valentina-python-client[testing]>=1.11.0",
     ]
     description = "A Discord bot for the Valentina Noir ecosystem."
     license = { file = "LICENSE" }
