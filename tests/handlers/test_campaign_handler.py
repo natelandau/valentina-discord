@@ -5,8 +5,8 @@ from __future__ import annotations
 from unittest.mock import AsyncMock
 
 import pytest
+from vclient.testing import CampaignFactory
 
-from tests.factories import make_campaign
 from vbot.db.models import DBCampaign
 from vbot.handlers.campaign import campaign_handler
 
@@ -20,8 +20,8 @@ class TestListCampaigns:
         """Verify delegates to API and syncs campaigns to DB."""
         # Given: the API returns two campaigns
         campaigns = [
-            make_campaign(id="c-001", name="Alpha"),
-            make_campaign(id="c-002", name="Beta"),
+            CampaignFactory.build(id="c-001", name="Alpha"),
+            CampaignFactory.build(id="c-002", name="Beta"),
         ]
         mock_campaigns_service._service.list_all.return_value = campaigns
 
@@ -55,7 +55,7 @@ class TestGetCampaign:
     async def test_returns_campaign(self, db, mock_campaigns_service):
         """Verify delegates to API and syncs campaign to DB."""
         # Given: the API returns a campaign
-        campaign = make_campaign(id="c-001", name="Test Campaign")
+        campaign = CampaignFactory.build(id="c-001", name="Test Campaign")
         mock_campaigns_service._service.get.return_value = campaign
 
         # When: getting a campaign
@@ -78,7 +78,7 @@ class TestCreateCampaign:
     async def test_creates_campaign(self, db, mock_campaigns_service, mock_valentina_context):
         """Verify API called, DB synced, and channel manager invoked."""
         # Given: the API returns a created campaign
-        campaign = make_campaign(id="c-001", name="New Campaign")
+        campaign = CampaignFactory.build(id="c-001", name="New Campaign")
         mock_campaigns_service._service.create.return_value = campaign
 
         # Given: channel manager is mocked
@@ -123,7 +123,7 @@ class TestUpdateCampaign:
     ):
         """Verify API called, DB updated, and channel manager called on rename."""
         # Given: the API returns an updated campaign
-        campaign = make_campaign(id="c-001", name="Renamed")
+        campaign = CampaignFactory.build(id="c-001", name="Renamed")
         mock_campaigns_service._service.update.return_value = campaign
 
         # Given: channel manager is mocked
@@ -155,7 +155,7 @@ class TestUpdateCampaign:
     ):
         """Verify channel manager NOT called when name is unchanged."""
         # Given: the API returns an updated campaign
-        campaign = make_campaign(id="c-001", name="Same Name")
+        campaign = CampaignFactory.build(id="c-001", name="Same Name")
         mock_campaigns_service._service.update.return_value = campaign
 
         # Given: channel manager is mocked
