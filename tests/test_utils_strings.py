@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import pytest
+from vclient.testing import CampaignExperienceFactory, RollStatisticsFactory
 
-from tests.factories import make_campaign_experience, make_roll_statistics
 from vbot.utils.strings import (
     convert_int_to_emoji,
     experience_to_markdown,
@@ -94,7 +94,17 @@ class TestStatisticsToMarkdown:
 
     def test_with_data(self):
         """Verify markdown output contains all statistic fields."""
-        stats = make_roll_statistics()
+        stats = RollStatisticsFactory.build(
+            total_rolls=11,
+            botches=2,
+            successes=5,
+            failures=3,
+            criticals=1,
+            criticals_percentage=9.09,
+            success_percentage=45.45,
+            failure_percentage=27.27,
+            botch_percentage=18.18,
+        )
         result = statistics_to_markdown(stats)
 
         assert "Total Rolls" in result
@@ -106,7 +116,7 @@ class TestStatisticsToMarkdown:
 
     def test_zero_rolls(self):
         """Verify zero-roll statistics return 'No statistics found' message."""
-        stats = make_roll_statistics(
+        stats = RollStatisticsFactory.build(
             total_rolls=0,
             botches=0,
             successes=0,
@@ -121,7 +131,7 @@ class TestStatisticsToMarkdown:
 
     def test_with_help(self):
         """Verify help text is appended when with_help=True."""
-        stats = make_roll_statistics()
+        stats = RollStatisticsFactory.build(total_rolls=1)
         result = statistics_to_markdown(stats, with_help=True)
 
         assert "Definitions:" in result
@@ -134,7 +144,7 @@ class TestExperienceToMarkdown:
 
     def test_with_data(self):
         """Verify markdown output contains all experience fields."""
-        exp = make_campaign_experience(xp_current=10, xp_total=25, cool_points=3)
+        exp = CampaignExperienceFactory.build(xp_current=10, xp_total=25, cool_points=3)
         result = experience_to_markdown(exp)
 
         assert "Current XP:  10" in result

@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from vclient.models import Asset
+from vclient.testing import AssetFactory
 
 from vbot.db.models import DBCampaign, DBCampaignBook, DBCharacter
 from vbot.handlers.assets import delete_asset_handler
@@ -32,25 +31,6 @@ class _AsyncIter:
         return item
 
 
-def _make_asset(**overrides) -> Asset:
-    """Create an Asset instance with sensible defaults."""
-    defaults = {
-        "id": "asset-001",
-        "date_created": datetime(2024, 1, 1, tzinfo=UTC),
-        "date_modified": datetime(2024, 1, 1, tzinfo=UTC),
-        "asset_type": "image",
-        "mime_type": "image/png",
-        "original_filename": "test.png",
-        "public_url": "https://example.com/test.png",
-        "uploaded_by": "user-001",
-        "company_id": "company-001",
-        "parent_type": "campaign",
-        "parent_id": "campaign-001",
-    }
-    defaults.update(overrides)
-    return Asset(**defaults)
-
-
 class TestDeleteCampaignAsset:
     """Tests for campaign parent type asset deletion."""
 
@@ -62,7 +42,7 @@ class TestDeleteCampaignAsset:
             "vbot.handlers.assets.campaigns_service",
             return_value=service,
         )
-        asset = _make_asset(parent_type="campaign", parent_id="campaign-001")
+        asset = AssetFactory.build(id="asset-001", parent_type="campaign", parent_id="campaign-001")
 
         # When: deleting the asset
         await delete_asset_handler(asset, user_api_id="user-001")
@@ -86,7 +66,7 @@ class TestDeleteUserAsset:
             "vbot.handlers.assets.users_service",
             return_value=service,
         )
-        asset = _make_asset(parent_type="user", parent_id="user-001")
+        asset = AssetFactory.build(id="asset-001", parent_type="user", parent_id="user-001")
 
         # When: deleting the asset
         await delete_asset_handler(asset, user_api_id="user-001")
@@ -117,7 +97,7 @@ class TestDeleteCharacterAsset:
             "vbot.handlers.assets.characters_service",
             return_value=service,
         )
-        asset = _make_asset(parent_type="character", parent_id="char-001")
+        asset = AssetFactory.build(id="asset-001", parent_type="character", parent_id="char-001")
 
         # When: deleting the asset
         await delete_asset_handler(asset, user_api_id="user-001")
@@ -133,7 +113,7 @@ class TestDeleteCharacterAsset:
             "vbot.handlers.assets.characters_service",
             return_value=AsyncMock(),
         )
-        asset = _make_asset(parent_type="character", parent_id="nonexistent")
+        asset = AssetFactory.build(id="asset-001", parent_type="character", parent_id="nonexistent")
 
         # When: deleting the asset
         await delete_asset_handler(asset, user_api_id="user-001")
@@ -159,7 +139,7 @@ class TestDeleteCampaignBookAsset:
             "vbot.handlers.assets.books_service",
             return_value=service,
         )
-        asset = _make_asset(parent_type="campaignbook", parent_id="book-001")
+        asset = AssetFactory.build(id="asset-001", parent_type="campaignbook", parent_id="book-001")
 
         # When: deleting the asset
         await delete_asset_handler(asset, user_api_id="user-001")
@@ -175,7 +155,9 @@ class TestDeleteCampaignBookAsset:
             "vbot.handlers.assets.books_service",
             return_value=AsyncMock(),
         )
-        asset = _make_asset(parent_type="campaignbook", parent_id="nonexistent")
+        asset = AssetFactory.build(
+            id="asset-001", parent_type="campaignbook", parent_id="nonexistent"
+        )
 
         # When: deleting the asset
         await delete_asset_handler(asset, user_api_id="user-001")
@@ -224,7 +206,9 @@ class TestDeleteCampaignChapterAsset:
         mocker.patch("vbot.handlers.assets.books_service", return_value=books_svc)
         mocker.patch("vbot.handlers.assets.chapters_service", side_effect=chapters_factory)
 
-        asset = _make_asset(parent_type="campaignchapter", parent_id="chapter-001")
+        asset = AssetFactory.build(
+            id="asset-001", parent_type="campaignchapter", parent_id="chapter-001"
+        )
 
         # When: deleting the asset
         await delete_asset_handler(asset, user_api_id="user-001")
@@ -241,7 +225,7 @@ class TestDeleteAssetEdgeCases:
     async def test_unknown_parent_type_does_not_raise(self):
         """Verify unknown parent type logs a warning and does not raise."""
         # Given: an asset with unknown parent type
-        asset = _make_asset(parent_type="unknown", parent_id="xxx")
+        asset = AssetFactory.build(id="asset-001", parent_type="unknown", parent_id="xxx")
 
         # When/Then: deleting does not raise
         await delete_asset_handler(asset, user_api_id="user-001")
@@ -249,7 +233,7 @@ class TestDeleteAssetEdgeCases:
     async def test_company_parent_type_is_noop(self):
         """Verify company parent type is a no-op (not yet implemented)."""
         # Given: an asset with company parent type
-        asset = _make_asset(parent_type="company", parent_id="company-001")
+        asset = AssetFactory.build(id="asset-001", parent_type="company", parent_id="company-001")
 
         # When/Then: deleting does not raise
         await delete_asset_handler(asset, user_api_id="user-001")

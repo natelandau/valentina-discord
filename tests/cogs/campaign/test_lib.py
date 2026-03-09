@@ -5,8 +5,12 @@ from __future__ import annotations
 from unittest.mock import AsyncMock
 
 import pytest
-
-from tests.factories import make_campaign, make_campaign_book, make_chapter, make_character
+from vclient.testing import (
+    CampaignBookFactory,
+    CampaignChapterFactory,
+    CampaignFactory,
+    CharacterFactory,
+)
 
 pytestmark = pytest.mark.anyio
 
@@ -33,10 +37,10 @@ class TestBuildCampaignListText:
     async def test_builds_text_with_campaigns_books_chapters_characters(self, mocker):
         """Verify formatted text includes campaigns, books, chapters, and characters."""
         # Given: one campaign with one book, one chapter, and one character
-        campaign = make_campaign(id="c-001", name="Dark Ages")
-        book = make_campaign_book(id="b-001", name="Book One", number=1)
-        chapter = make_chapter(id="ch-001", name="The Beginning", number=1)
-        character = make_character(id="char-001", name="John Doe")
+        campaign = CampaignFactory.build(id="c-001", name="Dark Ages")
+        book = CampaignBookFactory.build(id="b-001", name="Book One", number=1)
+        chapter = CampaignChapterFactory.build(id="ch-001", name="The Beginning", number=1)
+        character = CharacterFactory.build(id="char-001", name="John Doe")
 
         mock_campaign_handler = mocker.patch(
             "vbot.cogs.campaign.lib.campaign_handler", autospec=True
@@ -75,8 +79,8 @@ class TestBuildCampaignListText:
     async def test_builds_text_with_no_books(self, mocker):
         """Verify formatted text handles campaigns with no books."""
         # Given: a campaign with no books but one character
-        campaign = make_campaign(id="c-001", name="Modern Nights")
-        character = make_character(id="char-001", name="Jane Smith")
+        campaign = CampaignFactory.build(id="c-001", name="Modern Nights")
+        character = CharacterFactory.build(id="char-001", name="Jane Smith")
 
         mock_campaign_handler = mocker.patch(
             "vbot.cogs.campaign.lib.campaign_handler", autospec=True

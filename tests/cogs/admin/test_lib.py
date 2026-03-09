@@ -5,8 +5,8 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from vclient.testing import CampaignBookFactory, CampaignFactory, CharacterFactory
 
-from tests.factories import make_campaign, make_campaign_book, make_character
 from vbot.db.models import DBCampaign, DBCampaignBook, DBCharacter
 
 pytestmark = pytest.mark.anyio
@@ -18,9 +18,9 @@ class TestResyncAllData:
     async def test_syncs_campaigns_books_characters(self, db, mocker):
         """Verify all entity types are fetched from API and synced to DB."""
         # Given: API returns one campaign with one book and one character
-        campaign = make_campaign(id="c-001", name="Test Campaign")
-        book = make_campaign_book(id="b-001", name="Book One", campaign_id="c-001")
-        character = make_character(
+        campaign = CampaignFactory.build(id="c-001", name="Test Campaign")
+        book = CampaignBookFactory.build(id="b-001", name="Book One", campaign_id="c-001")
+        character = CharacterFactory.build(
             id="char-001", name="John Doe", campaign_id="c-001", type="PLAYER"
         )
 
@@ -68,7 +68,7 @@ class TestResyncAllData:
     async def test_prunes_stale_db_records(self, db, mocker):
         """Verify DB records not in API response are deleted."""
         # Given: API returns one campaign, but DB has two
-        campaign = make_campaign(id="c-001", name="Active Campaign")
+        campaign = CampaignFactory.build(id="c-001", name="Active Campaign")
 
         await DBCampaign.create(api_id="c-001", name="Active Campaign")
         stale_campaign = await DBCampaign.create(api_id="c-stale", name="Stale Campaign")

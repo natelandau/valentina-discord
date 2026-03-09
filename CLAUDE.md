@@ -52,9 +52,13 @@ uv run pytest tests/ -k "test_name_pattern" -x
 ## Testing
 
 - Tests use Tortoise ORM with in-memory SQLite via `tortoise_test_context` fixture (`tests/conftest.py`)
-- vclient services are mocked with `pytest-mock` - fixtures: `mock_campaigns_service`, `mock_users_service`, `mock_books_service`, `mock_characters_service`
+- **vclient.testing factories**: Use `CampaignFactory.build()`, `UserFactory.build()`, `CharacterFactory.build()`, `CampaignBookFactory.build()`, etc. from `vclient.testing` to create test DTOs. Pass keyword overrides to customize fields (e.g., `UserFactory.build(id="u-001", role="PLAYER")`)
+- **FakeVClient**: Handler tests use the `fake_vclient` fixture which provides a `FakeVClient` that intercepts all vclient HTTP calls. Use `Routes` constants from `vclient.testing` with the high-level methods:
+  - `fake_vclient.set_response(Routes.X_LIST, items=[obj1, obj2])` for paginated list endpoints
+  - `fake_vclient.set_response(Routes.X_GET, model=obj)` for single-object endpoints
+  - `fake_vclient.set_response(Routes.X_DELETE)` for no-content (204) endpoints
+  - `fake_vclient.set_error(Routes.X_GET, status_code=404)` for error responses
 - Discord objects (Member, Guild, Context) are mocked via factory fixtures in `conftest.py`
-- Test factories in `tests/factories.py` for creating test data
 
 ## Types and Constants
 

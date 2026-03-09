@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from tortoise.contrib.test import tortoise_test_context
+from vclient.testing import FakeVClient
 
 
 def pytest_configure() -> None:
@@ -42,60 +43,15 @@ async def db():
 
 
 # ---------------------------------------------------------------------------
-# vclient service mock fixtures
+# FakeVClient fixture
 # ---------------------------------------------------------------------------
 
 
 @pytest.fixture
-def mock_campaigns_service(mocker):
-    """Patch campaigns_service at the campaign handler import location."""
-    service = AsyncMock()
-    factory = mocker.patch(
-        "vbot.handlers.campaign.campaigns_service",
-        autospec=True,
-        return_value=service,
-    )
-    factory._service = service
-    return factory
-
-
-@pytest.fixture
-def mock_users_service(mocker):
-    """Patch users_service at the user handler import location."""
-    service = AsyncMock()
-    factory = mocker.patch(
-        "vbot.handlers.user.users_service",
-        autospec=True,
-        return_value=service,
-    )
-    factory._service = service
-    return factory
-
-
-@pytest.fixture
-def mock_books_service(mocker):
-    """Patch books_service at the book handler import location."""
-    service = AsyncMock()
-    factory = mocker.patch(
-        "vbot.handlers.book.books_service",
-        autospec=True,
-        return_value=service,
-    )
-    factory._service = service
-    return factory
-
-
-@pytest.fixture
-def mock_characters_service(mocker):
-    """Patch characters_service at the character handler import location."""
-    service = AsyncMock()
-    factory = mocker.patch(
-        "vbot.handlers.character.characters_service",
-        autospec=True,
-        return_value=service,
-    )
-    factory._service = service
-    return factory
+async def fake_vclient():
+    """Provide a FakeVClient that intercepts all vclient HTTP calls."""
+    async with FakeVClient() as client:
+        yield client
 
 
 # ---------------------------------------------------------------------------

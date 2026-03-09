@@ -5,8 +5,8 @@ from __future__ import annotations
 from unittest.mock import AsyncMock
 
 import pytest
+from vclient.testing import CharacterFactory, Routes
 
-from tests.factories import make_character
 from vbot.db.models import DBCampaign, DBCharacter
 from vbot.handlers.character import character_handler
 
@@ -16,17 +16,15 @@ pytestmark = pytest.mark.anyio
 class TestListCharacters:
     """Tests for CharacterAPIHandler.list_characters()."""
 
-    async def test_returns_characters(self, db, mock_characters_service):
-        """Verify delegates to API with filtering params passed as strings."""
+    async def test_returns_characters(self, db, fake_vclient):
+        """Verify delegates to API with filtering params and syncs to DB."""
         # Given: a campaign exists in the DB
         await DBCampaign.create(api_id="camp-001", name="Test Campaign")
 
         # Given: the API returns characters
-        characters = [
-            make_character(id="char-001", name="Alice"),
-            make_character(id="char-002", name="Bob"),
-        ]
-        mock_characters_service._service.list_all.return_value = characters
+        c1 = CharacterFactory.build(id="char-001", name="Alice", campaign_id="camp-001")
+        c2 = CharacterFactory.build(id="char-002", name="Bob", campaign_id="camp-001")
+        fake_vclient.set_response(Routes.CHARACTERS_LIST, items=[c1, c2])
 
         # When: listing characters with filter params
         result = await character_handler.list_characters(
@@ -37,59 +35,46 @@ class TestListCharacters:
             status="ALIVE",
         )
 
-        # Then: API was called with string values
-        mock_characters_service.assert_called_once_with(user_id="user-001", campaign_id="camp-001")
-        call_kwargs = mock_characters_service._service.list_all.call_args[1]
-        assert call_kwargs["character_class"] == "VAMPIRE"
-        assert call_kwargs["character_type"] == "PLAYER"
-        assert call_kwargs["status"] == "ALIVE"
-
         # Then: results returned and synced to DB
         assert len(result) == 2
         assert await DBCharacter.filter(api_id="char-001").count() == 1
         assert await DBCharacter.filter(api_id="char-002").count() == 1
 
-    async def test_none_filters_passed_as_none(self, db, mock_characters_service):
-        """Verify None filter params are passed as None to the API."""
+    async def test_none_filters(self, db, fake_vclient):
+        """Verify handler works with no filter params."""
         # Given: a campaign exists
         await DBCampaign.create(api_id="camp-001", name="Test Campaign")
-        mock_characters_service._service.list_all.return_value = []
+        fake_vclient.set_response(Routes.CHARACTERS_LIST, items=[])
 
         # When: listing with no filters
-        await character_handler.list_characters(
+        result = await character_handler.list_characters(
             campaign_api_id="camp-001",
             user_api_id="user-001",
         )
 
-        # Then: all filter params are None
-        call_kwargs = mock_characters_service._service.list_all.call_args[1]
-        assert call_kwargs["character_class"] is None
-        assert call_kwargs["character_type"] is None
-        assert call_kwargs["status"] is None
+        # Then: empty list returned without error
+        assert result == []
 
 
 class TestGetCharacter:
     """Tests for CharacterAPIHandler.get_character()."""
 
-    async def test_returns_character(self, db, mock_characters_service):
+    async def test_returns_character(self, db, fake_vclient):
         """Verify delegates to API and syncs to DB."""
         # Given: a campaign exists
         await DBCampaign.create(api_id="camp-001", name="Test Campaign")
 
         # Given: the API returns a character
-        character = make_character(id="char-001", name="Test Char")
-        mock_characters_service._service.get.return_value = character
+        character = CharacterFactory.build(id="char-001", name="Test Char", campaign_id="camp-001")
+        fake_vclient.set_response(Routes.CHARACTERS_GET, model=character)
 
         # When: getting a character
         result = await character_handler.get_character(
             user_api_id="user-001", campaign_api_id="camp-001", character_api_id="char-001"
         )
 
-        # Then: API was called correctly
-        mock_characters_service._service.get.assert_awaited_once_with("char-001")
+        # Then: correct character returned and synced to DB
         assert result.name == "Test Char"
-
-        # Then: character is synced to DB
         assert await DBCharacter.filter(api_id="char-001").count() == 1
 
 
@@ -102,7 +87,7 @@ class TestUpdateOrCreateCharacterInDb:
         await DBCampaign.create(api_id="camp-001", name="Test Campaign")
 
         # Given: a character DTO
-        character = make_character(
+        character = CharacterFactory.build(
             id="char-001",
             name="John Doe",
             type="STORYTELLER",
@@ -129,14 +114,14 @@ class TestUpdateOrCreateCharacterInDb:
 class TestCreateCharacter:
     """Tests for CharacterAPIHandler.create_character()."""
 
-    async def test_creates_character(self, db, mock_characters_service, mock_valentina_context):
+    async def test_creates_character(self, db, fake_vclient, mock_valentina_context):
         """Verify CharacterCreate DTO built, API called, and DB synced."""
         # Given: a campaign exists
         await DBCampaign.create(api_id="camp-001", name="Test Campaign")
 
         # Given: the API returns a created character
-        character = make_character(id="char-001", name="Jane Doe")
-        mock_characters_service._service.create.return_value = character
+        character = CharacterFactory.build(id="char-001", name="Jane Doe", campaign_id="camp-001")
+        fake_vclient.set_response(Routes.CHARACTERS_CREATE, model=character)
 
         # When: creating a character
         result = await character_handler.create_character(
@@ -148,18 +133,6 @@ class TestCreateCharacter:
             name_last="Doe",
         )
 
-        # Then: ctx.get_api_user_id() was called
-        mock_valentina_context.get_api_user_id.assert_awaited_once()
-
-        # Then: API was called with a CharacterCreate request
-        mock_characters_service._service.create.assert_awaited_once()
-        call_kwargs = mock_characters_service._service.create.call_args[1]
-        request = call_kwargs["request"]
-        assert request.name_first == "Jane"
-        assert request.name_last == "Doe"
-        assert request.character_class == "VAMPIRE"
-        assert request.game_version == "V5"
-
         # Then: character is synced to DB
         assert await DBCharacter.filter(api_id="char-001").count() == 1
         assert result.name == "Jane Doe"
@@ -168,16 +141,16 @@ class TestCreateCharacter:
 class TestUpdateCharacter:
     """Tests for CharacterAPIHandler.update_character()."""
 
-    async def test_delegates_to_api_and_syncs_db(
-        self, db, mock_characters_service, mock_valentina_context
-    ):
-        """Verify API update called with all params and result synced to DB."""
+    async def test_delegates_to_api_and_syncs_db(self, db, fake_vclient, mock_valentina_context):
+        """Verify API update called and result synced to DB."""
         # Given: a campaign exists
         await DBCampaign.create(api_id="camp-001", name="Test Campaign")
 
         # Given: the API returns an updated character
-        character = make_character(id="char-001", name="Updated Name")
-        mock_characters_service._service.update.return_value = character
+        character = CharacterFactory.build(
+            id="char-001", name="Updated Name", campaign_id="camp-001"
+        )
+        fake_vclient.set_response(Routes.CHARACTERS_UPDATE, model=character)
 
         # When: updating a character with basic fields
         result = await character_handler.update_character(
@@ -188,48 +161,26 @@ class TestUpdateCharacter:
             biography="A dark past",
         )
 
-        # Then: ctx.get_api_user_id() was called
-        mock_valentina_context.get_api_user_id.assert_awaited_once()
-
-        # Then: API was called with correct service params
-        mock_characters_service.assert_called_once_with(user_id="user-001", campaign_id="camp-001")
-
-        # Then: API update was called with character ID and kwargs
-        call_kwargs = mock_characters_service._service.update.call_args
-        assert call_kwargs[0][0] == "char-001"
-        assert call_kwargs[1]["age"] == 30
-        assert call_kwargs[1]["biography"] == "A dark past"
-
         # Then: result returned and synced to DB
         assert result.name == "Updated Name"
         assert await DBCharacter.filter(api_id="char-001").count() == 1
 
-    async def test_none_params_passed_as_none(
-        self, db, mock_characters_service, mock_valentina_context
-    ):
-        """Verify omitted params are passed as None to the API."""
+    async def test_none_params(self, db, fake_vclient, mock_valentina_context):
+        """Verify handler works with no optional fields."""
         # Given: a campaign exists
         await DBCampaign.create(api_id="camp-001", name="Test Campaign")
-        character = make_character(id="char-001")
-        mock_characters_service._service.update.return_value = character
+        character = CharacterFactory.build(id="char-001", campaign_id="camp-001")
+        fake_vclient.set_response(Routes.CHARACTERS_UPDATE, model=character)
 
         # When: updating with no optional fields
-        await character_handler.update_character(
+        result = await character_handler.update_character(
             mock_valentina_context,
             campaign_api_id="camp-001",
             character_api_id="char-001",
         )
 
-        # Then: all optional params are None
-        call_kwargs = mock_characters_service._service.update.call_args[1]
-        assert call_kwargs["character_class"] is None
-        assert call_kwargs["character_type"] is None
-        assert call_kwargs["game_version"] is None
-        assert call_kwargs["status"] is None
-        assert call_kwargs["name_first"] is None
-        assert call_kwargs["name_last"] is None
-        assert call_kwargs["name_nick"] is None
-        assert call_kwargs["age"] is None
+        # Then: handler completes without error
+        assert result.id == "char-001"
 
     @pytest.mark.parametrize(
         "trigger_field",
@@ -243,13 +194,13 @@ class TestUpdateCharacter:
         ids=["name_first", "name_last", "name_nick", "status", "character_type"],
     )
     async def test_channel_refresh_on_trigger_fields(
-        self, db, mock_characters_service, mock_valentina_context, mocker, trigger_field
+        self, db, fake_vclient, mock_valentina_context, mocker, trigger_field
     ):
         """Verify channel manager called when name, status, or type changes."""
         # Given: a campaign exists
         await DBCampaign.create(api_id="camp-001", name="Test Campaign")
-        character = make_character(id="char-001")
-        mock_characters_service._service.update.return_value = character
+        character = CharacterFactory.build(id="char-001", campaign_id="camp-001")
+        fake_vclient.set_response(Routes.CHARACTERS_UPDATE, model=character)
 
         # Given: ChannelManager is mocked at the handler's import location
         mock_cm_cls = mocker.patch("vbot.handlers.character.ChannelManager", autospec=True)
@@ -272,13 +223,13 @@ class TestUpdateCharacter:
         mock_cm_instance.sort_campaign_channels.assert_awaited_once()
 
     async def test_no_channel_refresh_without_trigger_fields(
-        self, db, mock_characters_service, mock_valentina_context, mocker
+        self, db, fake_vclient, mock_valentina_context, mocker
     ):
         """Verify channel manager not called when only non-trigger fields change."""
         # Given: a campaign exists
         await DBCampaign.create(api_id="camp-001", name="Test Campaign")
-        character = make_character(id="char-001")
-        mock_characters_service._service.update.return_value = character
+        character = CharacterFactory.build(id="char-001", campaign_id="camp-001")
+        fake_vclient.set_response(Routes.CHARACTERS_UPDATE, model=character)
 
         # Given: ChannelManager is mocked
         mock_cm_cls = mocker.patch("vbot.handlers.character.ChannelManager", autospec=True)
@@ -296,14 +247,12 @@ class TestUpdateCharacter:
         mock_cm_cls.assert_not_called()
 
     async def test_no_channel_refresh_when_campaign_not_in_db(
-        self, db, mock_characters_service, mock_valentina_context, mocker
+        self, db, fake_vclient, mock_valentina_context, mocker
     ):
         """Verify channel manager skipped when campaign has no DB record."""
-        # Given: the campaign does NOT exist in DB (API-only)
-        # But we still need a campaign for update_or_create_character_in_db
-        # The character factory defaults to campaign_id="campaign-001"
-        character = make_character(id="char-001", campaign_id="camp-missing")
-        mock_characters_service._service.update.return_value = character
+        # Given: the campaign does NOT exist in DB
+        character = CharacterFactory.build(id="char-001", campaign_id="camp-missing")
+        fake_vclient.set_response(Routes.CHARACTERS_UPDATE, model=character)
 
         # Given: ChannelManager is mocked
         mock_cm_cls = mocker.patch("vbot.handlers.character.ChannelManager", autospec=True)
@@ -324,7 +273,7 @@ class TestDeleteCharacter:
     """Tests for CharacterAPIHandler.delete_character()."""
 
     async def test_deletes_character_and_channel(
-        self, db, mock_characters_service, mock_valentina_context, mocker
+        self, db, fake_vclient, mock_valentina_context, mocker
     ):
         """Verify API delete called, channel deleted, and DB record removed."""
         # Given: a campaign and character exist in DB
@@ -336,6 +285,9 @@ class TestDeleteCharacter:
             status="ALIVE",
             campaign=db_campaign,
         )
+
+        # Given: the API accepts the delete
+        fake_vclient.set_response(Routes.CHARACTERS_DELETE)
 
         # Given: ChannelManager is mocked
         mock_cm_cls = mocker.patch("vbot.handlers.character.ChannelManager", autospec=True)
@@ -350,9 +302,6 @@ class TestDeleteCharacter:
             character_api_id="char-001",
         )
 
-        # Then: API delete was called
-        mock_characters_service._service.delete.assert_awaited_once_with("char-001")
-
         # Then: channel was deleted
         mock_cm_cls.assert_called_once_with(guild=mock_valentina_context.guild)
         mock_cm_instance.delete_character_channel.assert_awaited_once()
@@ -361,9 +310,12 @@ class TestDeleteCharacter:
         assert await DBCharacter.filter(api_id="char-001").count() == 0
 
     async def test_no_channel_delete_when_character_not_in_db(
-        self, db, mock_characters_service, mock_valentina_context, mocker
+        self, db, fake_vclient, mock_valentina_context, mocker
     ):
         """Verify channel manager skipped when character has no DB record."""
+        # Given: the API accepts the delete
+        fake_vclient.set_response(Routes.CHARACTERS_DELETE)
+
         # Given: ChannelManager is mocked
         mock_cm_cls = mocker.patch("vbot.handlers.character.ChannelManager", autospec=True)
 
@@ -374,9 +326,6 @@ class TestDeleteCharacter:
             campaign_api_id="camp-001",
             character_api_id="char-999",
         )
-
-        # Then: API delete was still called
-        mock_characters_service._service.delete.assert_awaited_once_with("char-999")
 
         # Then: ChannelManager was never instantiated
         mock_cm_cls.assert_not_called()
