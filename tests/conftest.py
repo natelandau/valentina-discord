@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from tortoise.contrib.test import tortoise_test_context
+from vclient.testing import FakeVClient
 
 
 def pytest_configure() -> None:
@@ -39,6 +40,18 @@ async def db():
         app_label="vbot",
     ) as ctx:
         yield ctx
+
+
+# ---------------------------------------------------------------------------
+# FakeVClient fixture
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+async def fake_vclient():
+    """Provide a FakeVClient that intercepts all vclient HTTP calls."""
+    async with FakeVClient() as client:
+        yield client
 
 
 # ---------------------------------------------------------------------------
