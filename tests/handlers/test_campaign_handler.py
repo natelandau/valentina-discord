@@ -5,8 +5,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock
 
 import pytest
-from vclient.endpoints import Endpoints
-from vclient.testing import CampaignFactory
+from vclient.testing import CampaignFactory, Routes
 
 from vbot.db.models import DBCampaign
 from vbot.handlers.campaign import campaign_handler
@@ -22,16 +21,7 @@ class TestListCampaigns:
         # Given: the API returns two campaigns
         c1 = CampaignFactory.build(id="c-001", name="Alpha")
         c2 = CampaignFactory.build(id="c-002", name="Beta")
-        fake_vclient.add_route(
-            "GET",
-            Endpoints.CAMPAIGNS,
-            json={
-                "items": [c1.model_dump(mode="json"), c2.model_dump(mode="json")],
-                "total": 2,
-                "limit": 100,
-                "offset": 0,
-            },
-        )
+        fake_vclient.set_response(Routes.CAMPAIGNS_LIST, items=[c1, c2])
 
         # When: listing campaigns
         result = await campaign_handler.list_campaigns(user_api_id="user-001")
@@ -46,11 +36,7 @@ class TestListCampaigns:
     async def test_empty_list(self, db, fake_vclient):
         """Verify handles empty campaign list gracefully."""
         # Given: the API returns no campaigns
-        fake_vclient.add_route(
-            "GET",
-            Endpoints.CAMPAIGNS,
-            json={"items": [], "total": 0, "limit": 100, "offset": 0},
-        )
+        fake_vclient.set_response(Routes.CAMPAIGNS_LIST, items=[])
 
         # When: listing campaigns
         result = await campaign_handler.list_campaigns(user_api_id="user-001")
@@ -66,7 +52,7 @@ class TestGetCampaign:
         """Verify delegates to API and syncs campaign to DB."""
         # Given: the API returns a campaign
         campaign = CampaignFactory.build(id="c-001", name="Test Campaign")
-        fake_vclient.add_route("GET", Endpoints.CAMPAIGN, json=campaign.model_dump(mode="json"))
+        fake_vclient.set_response(Routes.CAMPAIGNS_GET, model=campaign)
 
         # When: getting a campaign
         result = await campaign_handler.get_campaign(
@@ -87,12 +73,7 @@ class TestCreateCampaign:
         """Verify API called, DB synced, and channel manager invoked."""
         # Given: the API returns a created campaign
         campaign = CampaignFactory.build(id="c-001", name="New Campaign")
-        fake_vclient.add_route(
-            "POST",
-            Endpoints.CAMPAIGNS,
-            json=campaign.model_dump(mode="json"),
-            status_code=201,
-        )
+        fake_vclient.set_response(Routes.CAMPAIGNS_CREATE, model=campaign)
 
         # Given: channel manager is mocked
         mock_cm = AsyncMock()
@@ -127,7 +108,7 @@ class TestUpdateCampaign:
         """Verify DB updated and channel manager called on rename."""
         # Given: the API returns an updated campaign
         campaign = CampaignFactory.build(id="c-001", name="Renamed")
-        fake_vclient.add_route("PATCH", Endpoints.CAMPAIGN, json=campaign.model_dump(mode="json"))
+        fake_vclient.set_response(Routes.CAMPAIGNS_UPDATE, model=campaign)
 
         # Given: channel manager is mocked
         mock_cm = AsyncMock()
@@ -152,7 +133,7 @@ class TestUpdateCampaign:
         """Verify channel manager NOT called when name is unchanged."""
         # Given: the API returns an updated campaign
         campaign = CampaignFactory.build(id="c-001", name="Same Name")
-        fake_vclient.add_route("PATCH", Endpoints.CAMPAIGN, json=campaign.model_dump(mode="json"))
+        fake_vclient.set_response(Routes.CAMPAIGNS_UPDATE, model=campaign)
 
         # Given: channel manager is mocked
         mock_cm = AsyncMock()
@@ -183,7 +164,7 @@ class TestDeleteCampaign:
         await DBCampaign.create(api_id="c-001", name="Doomed Campaign")
 
         # Given: the API accepts the delete
-        fake_vclient.add_route("DELETE", Endpoints.CAMPAIGN, json={}, status_code=204)
+        fake_vclient.set_response(Routes.CAMPAIGNS_DELETE)
 
         # Given: channel manager is mocked
         mock_cm = AsyncMock()
@@ -205,7 +186,7 @@ class TestDeleteCampaign:
     async def test_deletes_campaign_not_in_db(self, db, fake_vclient, mock_valentina_context):
         """Verify handles missing DB record gracefully."""
         # Given: the API accepts the delete
-        fake_vclient.add_route("DELETE", Endpoints.CAMPAIGN, json={}, status_code=204)
+        fake_vclient.set_response(Routes.CAMPAIGNS_DELETE)
 
         # When: deleting the campaign (no DB record exists)
         await campaign_handler.delete_campaign(mock_valentina_context, "c-nonexistent")

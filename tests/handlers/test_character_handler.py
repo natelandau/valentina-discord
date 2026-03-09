@@ -5,23 +5,12 @@ from __future__ import annotations
 from unittest.mock import AsyncMock
 
 import pytest
-from vclient.endpoints import Endpoints
-from vclient.testing import CharacterFactory
+from vclient.testing import CharacterFactory, Routes
 
 from vbot.db.models import DBCampaign, DBCharacter
 from vbot.handlers.character import character_handler
 
 pytestmark = pytest.mark.anyio
-
-
-def _character_list_response(*characters) -> dict:
-    """Build a paginated list response from character instances."""
-    return {
-        "items": [c.model_dump(mode="json") for c in characters],
-        "total": len(characters),
-        "limit": 100,
-        "offset": 0,
-    }
 
 
 class TestListCharacters:
@@ -35,7 +24,7 @@ class TestListCharacters:
         # Given: the API returns characters
         c1 = CharacterFactory.build(id="char-001", name="Alice", campaign_id="camp-001")
         c2 = CharacterFactory.build(id="char-002", name="Bob", campaign_id="camp-001")
-        fake_vclient.add_route("GET", Endpoints.CHARACTERS, json=_character_list_response(c1, c2))
+        fake_vclient.set_response(Routes.CHARACTERS_LIST, items=[c1, c2])
 
         # When: listing characters with filter params
         result = await character_handler.list_characters(
@@ -55,7 +44,7 @@ class TestListCharacters:
         """Verify handler works with no filter params."""
         # Given: a campaign exists
         await DBCampaign.create(api_id="camp-001", name="Test Campaign")
-        fake_vclient.add_route("GET", Endpoints.CHARACTERS, json=_character_list_response())
+        fake_vclient.set_response(Routes.CHARACTERS_LIST, items=[])
 
         # When: listing with no filters
         result = await character_handler.list_characters(
@@ -77,7 +66,7 @@ class TestGetCharacter:
 
         # Given: the API returns a character
         character = CharacterFactory.build(id="char-001", name="Test Char", campaign_id="camp-001")
-        fake_vclient.add_route("GET", Endpoints.CHARACTER, json=character.model_dump(mode="json"))
+        fake_vclient.set_response(Routes.CHARACTERS_GET, model=character)
 
         # When: getting a character
         result = await character_handler.get_character(
@@ -132,12 +121,7 @@ class TestCreateCharacter:
 
         # Given: the API returns a created character
         character = CharacterFactory.build(id="char-001", name="Jane Doe", campaign_id="camp-001")
-        fake_vclient.add_route(
-            "POST",
-            Endpoints.CHARACTERS,
-            json=character.model_dump(mode="json"),
-            status_code=201,
-        )
+        fake_vclient.set_response(Routes.CHARACTERS_CREATE, model=character)
 
         # When: creating a character
         result = await character_handler.create_character(
@@ -166,7 +150,7 @@ class TestUpdateCharacter:
         character = CharacterFactory.build(
             id="char-001", name="Updated Name", campaign_id="camp-001"
         )
-        fake_vclient.add_route("PATCH", Endpoints.CHARACTER, json=character.model_dump(mode="json"))
+        fake_vclient.set_response(Routes.CHARACTERS_UPDATE, model=character)
 
         # When: updating a character with basic fields
         result = await character_handler.update_character(
@@ -186,7 +170,7 @@ class TestUpdateCharacter:
         # Given: a campaign exists
         await DBCampaign.create(api_id="camp-001", name="Test Campaign")
         character = CharacterFactory.build(id="char-001", campaign_id="camp-001")
-        fake_vclient.add_route("PATCH", Endpoints.CHARACTER, json=character.model_dump(mode="json"))
+        fake_vclient.set_response(Routes.CHARACTERS_UPDATE, model=character)
 
         # When: updating with no optional fields
         result = await character_handler.update_character(
@@ -216,7 +200,7 @@ class TestUpdateCharacter:
         # Given: a campaign exists
         await DBCampaign.create(api_id="camp-001", name="Test Campaign")
         character = CharacterFactory.build(id="char-001", campaign_id="camp-001")
-        fake_vclient.add_route("PATCH", Endpoints.CHARACTER, json=character.model_dump(mode="json"))
+        fake_vclient.set_response(Routes.CHARACTERS_UPDATE, model=character)
 
         # Given: ChannelManager is mocked at the handler's import location
         mock_cm_cls = mocker.patch("vbot.handlers.character.ChannelManager", autospec=True)
@@ -245,7 +229,7 @@ class TestUpdateCharacter:
         # Given: a campaign exists
         await DBCampaign.create(api_id="camp-001", name="Test Campaign")
         character = CharacterFactory.build(id="char-001", campaign_id="camp-001")
-        fake_vclient.add_route("PATCH", Endpoints.CHARACTER, json=character.model_dump(mode="json"))
+        fake_vclient.set_response(Routes.CHARACTERS_UPDATE, model=character)
 
         # Given: ChannelManager is mocked
         mock_cm_cls = mocker.patch("vbot.handlers.character.ChannelManager", autospec=True)
@@ -268,7 +252,7 @@ class TestUpdateCharacter:
         """Verify channel manager skipped when campaign has no DB record."""
         # Given: the campaign does NOT exist in DB
         character = CharacterFactory.build(id="char-001", campaign_id="camp-missing")
-        fake_vclient.add_route("PATCH", Endpoints.CHARACTER, json=character.model_dump(mode="json"))
+        fake_vclient.set_response(Routes.CHARACTERS_UPDATE, model=character)
 
         # Given: ChannelManager is mocked
         mock_cm_cls = mocker.patch("vbot.handlers.character.ChannelManager", autospec=True)
@@ -303,7 +287,7 @@ class TestDeleteCharacter:
         )
 
         # Given: the API accepts the delete
-        fake_vclient.add_route("DELETE", Endpoints.CHARACTER, json={}, status_code=204)
+        fake_vclient.set_response(Routes.CHARACTERS_DELETE)
 
         # Given: ChannelManager is mocked
         mock_cm_cls = mocker.patch("vbot.handlers.character.ChannelManager", autospec=True)
@@ -330,7 +314,7 @@ class TestDeleteCharacter:
     ):
         """Verify channel manager skipped when character has no DB record."""
         # Given: the API accepts the delete
-        fake_vclient.add_route("DELETE", Endpoints.CHARACTER, json={}, status_code=204)
+        fake_vclient.set_response(Routes.CHARACTERS_DELETE)
 
         # Given: ChannelManager is mocked
         mock_cm_cls = mocker.patch("vbot.handlers.character.ChannelManager", autospec=True)

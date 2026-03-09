@@ -53,7 +53,11 @@ uv run pytest tests/ -k "test_name_pattern" -x
 
 - Tests use Tortoise ORM with in-memory SQLite via `tortoise_test_context` fixture (`tests/conftest.py`)
 - **vclient.testing factories**: Use `CampaignFactory.build()`, `UserFactory.build()`, `CharacterFactory.build()`, `CampaignBookFactory.build()`, etc. from `vclient.testing` to create test DTOs. Pass keyword overrides to customize fields (e.g., `UserFactory.build(id="u-001", role="PLAYER")`)
-- **FakeVClient**: Handler tests use the `fake_vclient` fixture which provides a `FakeVClient` that intercepts all vclient HTTP calls. Register responses with `fake_vclient.add_route(method, Endpoints.X, json=..., status_code=...)`. Paginated list responses use shape `{"items": [...], "total": N, "limit": 100, "offset": 0}`. Single objects use `obj.model_dump(mode="json")`
+- **FakeVClient**: Handler tests use the `fake_vclient` fixture which provides a `FakeVClient` that intercepts all vclient HTTP calls. Use `Routes` constants from `vclient.testing` with the high-level methods:
+  - `fake_vclient.set_response(Routes.X_LIST, items=[obj1, obj2])` for paginated list endpoints
+  - `fake_vclient.set_response(Routes.X_GET, model=obj)` for single-object endpoints
+  - `fake_vclient.set_response(Routes.X_DELETE)` for no-content (204) endpoints
+  - `fake_vclient.set_error(Routes.X_GET, status_code=404)` for error responses
 - Discord objects (Member, Guild, Context) are mocked via factory fixtures in `conftest.py`
 
 ## Types and Constants

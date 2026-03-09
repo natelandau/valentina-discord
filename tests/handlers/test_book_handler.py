@@ -5,8 +5,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock
 
 import pytest
-from vclient.endpoints import Endpoints
-from vclient.testing import CampaignBookFactory
+from vclient.testing import CampaignBookFactory, Routes
 
 from vbot.db.models import DBCampaign, DBCampaignBook
 from vbot.handlers.book import book_handler
@@ -29,16 +28,7 @@ class TestListBooks:
         b2 = CampaignBookFactory.build(
             id="b-002", name="Book Two", number=2, campaign_id="camp-001"
         )
-        fake_vclient.add_route(
-            "GET",
-            Endpoints.CAMPAIGN_BOOKS,
-            json={
-                "items": [b1.model_dump(mode="json"), b2.model_dump(mode="json")],
-                "total": 2,
-                "limit": 100,
-                "offset": 0,
-            },
-        )
+        fake_vclient.set_response(Routes.BOOKS_LIST, items=[b1, b2])
 
         # When: listing books
         result = await book_handler.list_books(user_api_id="user-001", campaign_api_id="camp-001")
@@ -61,7 +51,7 @@ class TestGetBook:
 
         # Given: the API returns a book
         book = CampaignBookFactory.build(id="b-001", name="The Book", campaign_id="camp-001")
-        fake_vclient.add_route("GET", Endpoints.CAMPAIGN_BOOK, json=book.model_dump(mode="json"))
+        fake_vclient.set_response(Routes.BOOKS_GET, model=book)
 
         # When: getting a book
         result = await book_handler.get_book(
@@ -85,12 +75,7 @@ class TestCreateBook:
 
         # Given: the API returns a created book
         book = CampaignBookFactory.build(id="b-001", name="New Book", campaign_id="camp-001")
-        fake_vclient.add_route(
-            "POST",
-            Endpoints.CAMPAIGN_BOOKS,
-            json=book.model_dump(mode="json"),
-            status_code=201,
-        )
+        fake_vclient.set_response(Routes.BOOKS_CREATE, model=book)
 
         # Given: channel manager is mocked
         mock_cm = AsyncMock()
@@ -124,7 +109,7 @@ class TestUpdateBook:
 
         # Given: the API returns an updated book
         book = CampaignBookFactory.build(id="b-001", name="New Name", campaign_id="camp-001")
-        fake_vclient.add_route("PATCH", Endpoints.CAMPAIGN_BOOK, json=book.model_dump(mode="json"))
+        fake_vclient.set_response(Routes.BOOKS_UPDATE, model=book)
 
         # Given: channel manager is mocked
         mock_cm = AsyncMock()
@@ -154,7 +139,7 @@ class TestUpdateBook:
 
         # Given: the API returns the book
         book = CampaignBookFactory.build(id="b-001", name="Same Name", campaign_id="camp-001")
-        fake_vclient.add_route("PATCH", Endpoints.CAMPAIGN_BOOK, json=book.model_dump(mode="json"))
+        fake_vclient.set_response(Routes.BOOKS_UPDATE, model=book)
 
         # Given: channel manager is mocked
         mock_cm = AsyncMock()
@@ -189,7 +174,7 @@ class TestDeleteBook:
         )
 
         # Given: the API accepts the delete
-        fake_vclient.add_route("DELETE", Endpoints.CAMPAIGN_BOOK, json={}, status_code=204)
+        fake_vclient.set_response(Routes.BOOKS_DELETE)
 
         # Given: channel manager is mocked
         mock_cm = AsyncMock()
@@ -222,21 +207,10 @@ class TestRenumberBook:
         book = CampaignBookFactory.build(
             id="b-001", name="Book One", number=3, campaign_id="camp-001"
         )
-        fake_vclient.add_route(
-            "PUT", Endpoints.CAMPAIGN_BOOK_NUMBER, json=book.model_dump(mode="json")
-        )
+        fake_vclient.set_response(Routes.BOOKS_RENUMBER, model=book)
 
         # Given: list_all returns updated books (called by list_books internally)
-        fake_vclient.add_route(
-            "GET",
-            Endpoints.CAMPAIGN_BOOKS,
-            json={
-                "items": [book.model_dump(mode="json")],
-                "total": 1,
-                "limit": 100,
-                "offset": 0,
-            },
-        )
+        fake_vclient.set_response(Routes.BOOKS_LIST, items=[book])
 
         # Given: channel manager is mocked
         mock_cm = AsyncMock()

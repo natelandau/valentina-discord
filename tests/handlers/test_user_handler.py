@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import pytest
-from vclient.endpoints import Endpoints
 from vclient.models import DiscordProfile
-from vclient.testing import UserFactory
+from vclient.testing import Routes, UserFactory
 
 from vbot.db.models import DBUser
 from vbot.handlers.user import user_api_handler
@@ -18,16 +17,6 @@ _DISCORD_PROFILE = DiscordProfile(
 )
 
 
-def _user_list_response(*users) -> dict:
-    """Build a paginated list response from user instances."""
-    return {
-        "items": [u.model_dump(mode="json") for u in users],
-        "total": len(users),
-        "limit": 100,
-        "offset": 0,
-    }
-
-
 class TestListUsers:
     """Tests for UserAPIHandler.list_users()."""
 
@@ -36,7 +25,7 @@ class TestListUsers:
         # Given: the API returns users
         u1 = UserFactory.build(id="u-001", username="alice")
         u2 = UserFactory.build(id="u-002", username="bob")
-        fake_vclient.add_route("GET", Endpoints.USERS, json=_user_list_response(u1, u2))
+        fake_vclient.set_response(Routes.USERS_LIST, items=[u1, u2])
 
         # When: listing users
         result = await user_api_handler.list_users()
@@ -47,7 +36,7 @@ class TestListUsers:
     async def test_empty_list(self, fake_vclient):
         """Verify handles empty user list gracefully."""
         # Given: the API returns no users
-        fake_vclient.add_route("GET", Endpoints.USERS, json=_user_list_response())
+        fake_vclient.set_response(Routes.USERS_LIST, items=[])
 
         # When: listing users
         result = await user_api_handler.list_users()
@@ -63,7 +52,7 @@ class TestGetUser:
         """Verify delegates to API and returns user."""
         # Given: the API returns a user
         user = UserFactory.build(id="u-001", username="alice")
-        fake_vclient.add_route("GET", Endpoints.USER, json=user.model_dump(mode="json"))
+        fake_vclient.set_response(Routes.USERS_GET, model=user)
 
         # When: getting a user
         result = await user_api_handler.get_user("u-001")
@@ -86,9 +75,7 @@ class TestCreateUser:
             role="PLAYER",
             discord_profile=_DISCORD_PROFILE,
         )
-        fake_vclient.add_route(
-            "POST", Endpoints.USERS, json=user.model_dump(mode="json"), status_code=201
-        )
+        fake_vclient.set_response(Routes.USERS_CREATE, model=user)
 
         # When: creating a user
         result = await user_api_handler.create_user(
@@ -115,9 +102,7 @@ class TestCreateUser:
             role="ADMIN",
             discord_profile=_DISCORD_PROFILE,
         )
-        fake_vclient.add_route(
-            "POST", Endpoints.USERS, json=user.model_dump(mode="json"), status_code=201
-        )
+        fake_vclient.set_response(Routes.USERS_CREATE, model=user)
 
         # When: creating the user
         await user_api_handler.create_user(
@@ -147,7 +132,7 @@ class TestUpdateUser:
             role="PLAYER",
             discord_profile=_DISCORD_PROFILE,
         )
-        fake_vclient.add_route("PATCH", Endpoints.USER, json=user.model_dump(mode="json"))
+        fake_vclient.set_response(Routes.USERS_UPDATE, model=user)
 
         # When: updating the user
         result = await user_api_handler.update_user(
@@ -177,7 +162,7 @@ class TestDeleteUser:
         )
 
         # Given: the API accepts the delete
-        fake_vclient.add_route("DELETE", Endpoints.USER, json={}, status_code=204)
+        fake_vclient.set_response(Routes.USERS_DELETE)
 
         # When: deleting the user
         await user_api_handler.delete_user("u-001", "admin-001")
