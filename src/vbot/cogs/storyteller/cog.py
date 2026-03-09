@@ -307,6 +307,7 @@ class StorytellerCog(commands.Cog):
             ).assign(
                 trait_id=trait_api_id,
                 value=new_value,
+                currency="NO_COST",
             )
         else:
             await character_traits_service(
