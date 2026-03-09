@@ -5,8 +5,8 @@ from __future__ import annotations
 from unittest.mock import AsyncMock
 
 import pytest
+from vclient.testing import CampaignBookFactory
 
-from tests.factories import make_campaign_book
 from vbot.db.models import DBCampaign, DBCampaignBook
 from vbot.handlers.book import book_handler
 
@@ -23,8 +23,12 @@ class TestListBooks:
 
         # Given: the API returns books
         books = [
-            make_campaign_book(id="b-001", name="Book One", number=1, campaign_id="camp-001"),
-            make_campaign_book(id="b-002", name="Book Two", number=2, campaign_id="camp-001"),
+            CampaignBookFactory.build(
+                id="b-001", name="Book One", number=1, campaign_id="camp-001"
+            ),
+            CampaignBookFactory.build(
+                id="b-002", name="Book Two", number=2, campaign_id="camp-001"
+            ),
         ]
         mock_books_service._service.list_all.return_value = books
 
@@ -49,7 +53,7 @@ class TestGetBook:
         await DBCampaign.create(api_id="camp-001", name="Test Campaign")
 
         # Given: the API returns a book
-        book = make_campaign_book(id="b-001", name="The Book", campaign_id="camp-001")
+        book = CampaignBookFactory.build(id="b-001", name="The Book", campaign_id="camp-001")
         mock_books_service._service.get.return_value = book
 
         # When: getting a book
@@ -74,7 +78,7 @@ class TestCreateBook:
         await DBCampaign.create(api_id="camp-001", name="Test Campaign")
 
         # Given: the API returns a created book
-        book = make_campaign_book(id="b-001", name="New Book", campaign_id="camp-001")
+        book = CampaignBookFactory.build(id="b-001", name="New Book", campaign_id="camp-001")
         mock_books_service._service.create.return_value = book
 
         # Given: channel manager is mocked
@@ -113,7 +117,7 @@ class TestUpdateBook:
         await DBCampaignBook.create(api_id="b-001", name="Old Name", number=1, campaign=db_campaign)
 
         # Given: the API returns an updated book
-        book = make_campaign_book(id="b-001", name="New Name", campaign_id="camp-001")
+        book = CampaignBookFactory.build(id="b-001", name="New Name", campaign_id="camp-001")
         mock_books_service._service.update.return_value = book
 
         # Given: channel manager is mocked
@@ -143,7 +147,7 @@ class TestUpdateBook:
         )
 
         # Given: the API returns the book
-        book = make_campaign_book(id="b-001", name="Same Name", campaign_id="camp-001")
+        book = CampaignBookFactory.build(id="b-001", name="Same Name", campaign_id="camp-001")
         mock_books_service._service.update.return_value = book
 
         # Given: channel manager is mocked
@@ -209,7 +213,9 @@ class TestRenumberBook:
         await DBCampaignBook.create(api_id="b-001", name="Book One", number=1, campaign=db_campaign)
 
         # Given: the API returns the renumbered book
-        book = make_campaign_book(id="b-001", name="Book One", number=3, campaign_id="camp-001")
+        book = CampaignBookFactory.build(
+            id="b-001", name="Book One", number=3, campaign_id="camp-001"
+        )
         mock_books_service._service.renumber.return_value = book
 
         # Given: list_all returns updated books (called by list_books internally)
