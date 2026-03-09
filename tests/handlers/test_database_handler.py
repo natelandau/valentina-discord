@@ -5,8 +5,8 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
+from vclient.testing import CampaignBookFactory, CampaignFactory, CharacterFactory, UserFactory
 
-from tests.factories import make_campaign, make_campaign_book, make_character, make_user
 from vbot.db.models import DBCampaign, DBCampaignBook, DBCharacter, DBUser
 from vbot.handlers.database import database_handler
 
@@ -19,7 +19,7 @@ class TestUpdateOrCreateCampaign:
     async def test_creates_new(self, db):
         """Verify creates a new DBCampaign from a Campaign DTO."""
         # Given: a campaign DTO
-        campaign = make_campaign(id="camp-001", name="Test Campaign")
+        campaign = CampaignFactory.build(id="camp-001", name="Test Campaign")
 
         # When: updating or creating in the database
         result = await database_handler.update_or_create_campaign(campaign)
@@ -35,7 +35,7 @@ class TestUpdateOrCreateCampaign:
         await DBCampaign.create(api_id="camp-001", name="Old Name")
 
         # Given: a campaign DTO with the same ID but updated name
-        campaign = make_campaign(id="camp-001", name="New Name")
+        campaign = CampaignFactory.build(id="camp-001", name="New Name")
 
         # When: updating or creating
         result = await database_handler.update_or_create_campaign(campaign)
@@ -54,7 +54,7 @@ class TestUpdateOrCreateBook:
         await DBCampaign.create(api_id="camp-001", name="Test Campaign")
 
         # Given: a book DTO linked to that campaign
-        book = make_campaign_book(
+        book = CampaignBookFactory.build(
             id="book-001", name="Chapter One", number=1, campaign_id="camp-001"
         )
 
@@ -77,7 +77,9 @@ class TestUpdateOrCreateBook:
         )
 
         # Given: a book DTO with updated name
-        book = make_campaign_book(id="book-001", name="New Name", number=2, campaign_id="camp-001")
+        book = CampaignBookFactory.build(
+            id="book-001", name="New Name", number=2, campaign_id="camp-001"
+        )
 
         # When: updating or creating
         result = await database_handler.update_or_create_book(book)
@@ -97,7 +99,7 @@ class TestUpdateOrCreateCharacter:
         await DBCampaign.create(api_id="camp-001", name="Test Campaign")
 
         # Given: a character DTO
-        character = make_character(
+        character = CharacterFactory.build(
             id="char-001",
             name="John Doe",
             type="PLAYER",
@@ -131,7 +133,7 @@ class TestUpdateOrCreateCharacter:
         )
 
         # Given: a character DTO with updated name
-        character = make_character(
+        character = CharacterFactory.build(
             id="char-001",
             name="New Name",
             type="STORYTELLER",
@@ -155,7 +157,7 @@ class TestUpdateOrCreateUser:
     async def test_creates_new(self, db):
         """Verify creates a new DBUser from API User + discord_user."""
         # Given: a user DTO and a discord member mock
-        user = make_user(
+        user = UserFactory.build(
             id="user-001", username="testuser", email="test@example.com", role="PLAYER"
         )
         discord_user = MagicMock()
@@ -182,7 +184,9 @@ class TestUpdateOrCreateUser:
         )
 
         # Given: a user DTO with updated username
-        user = make_user(id="user-001", username="newuser", email="new@example.com", role="ADMIN")
+        user = UserFactory.build(
+            id="user-001", username="newuser", email="new@example.com", role="ADMIN"
+        )
         discord_user = MagicMock()
         discord_user.id = 123456789
 
