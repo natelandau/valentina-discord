@@ -5,8 +5,8 @@ from __future__ import annotations
 from unittest.mock import AsyncMock
 
 import pytest
+from vclient.testing import CharacterFactory
 
-from tests.factories import make_character
 from vbot.db.models import DBCampaign, DBCharacter
 from vbot.handlers.character import character_handler
 
@@ -23,8 +23,8 @@ class TestListCharacters:
 
         # Given: the API returns characters
         characters = [
-            make_character(id="char-001", name="Alice"),
-            make_character(id="char-002", name="Bob"),
+            CharacterFactory.build(id="char-001", name="Alice"),
+            CharacterFactory.build(id="char-002", name="Bob"),
         ]
         mock_characters_service._service.list_all.return_value = characters
 
@@ -77,7 +77,7 @@ class TestGetCharacter:
         await DBCampaign.create(api_id="camp-001", name="Test Campaign")
 
         # Given: the API returns a character
-        character = make_character(id="char-001", name="Test Char")
+        character = CharacterFactory.build(id="char-001", name="Test Char")
         mock_characters_service._service.get.return_value = character
 
         # When: getting a character
@@ -102,7 +102,7 @@ class TestUpdateOrCreateCharacterInDb:
         await DBCampaign.create(api_id="camp-001", name="Test Campaign")
 
         # Given: a character DTO
-        character = make_character(
+        character = CharacterFactory.build(
             id="char-001",
             name="John Doe",
             type="STORYTELLER",
@@ -135,7 +135,7 @@ class TestCreateCharacter:
         await DBCampaign.create(api_id="camp-001", name="Test Campaign")
 
         # Given: the API returns a created character
-        character = make_character(id="char-001", name="Jane Doe")
+        character = CharacterFactory.build(id="char-001", name="Jane Doe")
         mock_characters_service._service.create.return_value = character
 
         # When: creating a character
@@ -176,7 +176,7 @@ class TestUpdateCharacter:
         await DBCampaign.create(api_id="camp-001", name="Test Campaign")
 
         # Given: the API returns an updated character
-        character = make_character(id="char-001", name="Updated Name")
+        character = CharacterFactory.build(id="char-001", name="Updated Name")
         mock_characters_service._service.update.return_value = character
 
         # When: updating a character with basic fields
@@ -210,7 +210,7 @@ class TestUpdateCharacter:
         """Verify omitted params are passed as None to the API."""
         # Given: a campaign exists
         await DBCampaign.create(api_id="camp-001", name="Test Campaign")
-        character = make_character(id="char-001")
+        character = CharacterFactory.build(id="char-001")
         mock_characters_service._service.update.return_value = character
 
         # When: updating with no optional fields
@@ -248,7 +248,7 @@ class TestUpdateCharacter:
         """Verify channel manager called when name, status, or type changes."""
         # Given: a campaign exists
         await DBCampaign.create(api_id="camp-001", name="Test Campaign")
-        character = make_character(id="char-001")
+        character = CharacterFactory.build(id="char-001")
         mock_characters_service._service.update.return_value = character
 
         # Given: ChannelManager is mocked at the handler's import location
@@ -277,7 +277,7 @@ class TestUpdateCharacter:
         """Verify channel manager not called when only non-trigger fields change."""
         # Given: a campaign exists
         await DBCampaign.create(api_id="camp-001", name="Test Campaign")
-        character = make_character(id="char-001")
+        character = CharacterFactory.build(id="char-001")
         mock_characters_service._service.update.return_value = character
 
         # Given: ChannelManager is mocked
@@ -302,7 +302,7 @@ class TestUpdateCharacter:
         # Given: the campaign does NOT exist in DB (API-only)
         # But we still need a campaign for update_or_create_character_in_db
         # The character factory defaults to campaign_id="campaign-001"
-        character = make_character(id="char-001", campaign_id="camp-missing")
+        character = CharacterFactory.build(id="char-001", campaign_id="camp-missing")
         mock_characters_service._service.update.return_value = character
 
         # Given: ChannelManager is mocked
