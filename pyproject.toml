@@ -1,21 +1,21 @@
 [project]
     authors = [{ name = "Nate Landau", email = "github@natelandau.com" }]
     dependencies = [
-        "aerich[toml]>=0.8.1",
-        "aiohttp>=3.13.3",
-        "aiosqlite==0.21.0",
+        "aerich[toml]>=0.9.2",
+        "aiohttp>=3.13.5",
+        "aiosqlite==0.22.1",
         "audioop-lts>=0.2.2,<1",
         "httpx>=0.28.1",
         "humanize>=4.15.0",
         "inflect>=7.5.0",
         "loguru>=0.7.3",
-        "py-cord>=2.7.1",
-        "pydantic-settings>=2.13.1",
-        "pydantic[email]>=2.12.5",
-        "rich>=14.3.3",
+        "py-cord>=2.7.2",
+        "pydantic-settings>=2.14.0",
+        "pydantic[email]>=2.13.3",
+        "rich>=15.0.0",
         "semver>=3.0.4",
-        "tortoise-orm>=1.1.6",
-        "valentina-python-client[testing]>=1.11.0",
+        "tortoise-orm>=1.1.7",
+        "valentina-python-client[testing]>=2.0.0",
     ]
     description = "A Discord bot for the Valentina Noir ecosystem."
     license = { file = "LICENSE" }
